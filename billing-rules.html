@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>计费规则 — 仓间调拨结算</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f5f6fa;color:#1a1a2e;line-height:1.6}
+/* NAV */
+.top-nav{background:#fff;border-bottom:1px solid #e2e4e9;display:flex;align-items:center;padding:0 32px;height:56px;position:sticky;top:0;z-index:100}
+.top-nav .brand{font-size:15px;font-weight:700;color:#0f766e;margin-right:40px;letter-spacing:-.3px}
+.top-nav a{text-decoration:none;color:#64748b;font-size:14px;font-weight:500;padding:16px 14px;border-bottom:2px solid transparent;transition:.2s}
+.top-nav a:hover{color:#0f766e}
+.top-nav a.active{color:#0f766e;border-bottom-color:#0f766e}
+/* FLOW BAR */
+.flow-bar{background:linear-gradient(90deg,#0f766e,#14b8a6);padding:12px 32px;display:flex;align-items:center;gap:0;overflow-x:auto}
+.flow-step{display:flex;align-items:center;gap:6px;padding:6px 18px;font-size:13px;font-weight:600;white-space:nowrap;text-decoration:none}
+.flow-step.current{background:rgba(255,255,255,.2);color:#fff;border-radius:16px}
+.flow-step.done{color:rgba(255,255,255,.55)}
+.flow-step.next{color:rgba(255,255,255,.35)}
+.flow-arrow{color:rgba(255,255,255,.3);font-size:16px;padding:0 6px}
+/* LAYOUT */
+.page{max-width:1240px;margin:0 auto;padding:24px 32px 60px}
+.page-title{font-size:22px;font-weight:700;margin-bottom:4px}
+.page-sub{font-size:13px;color:#94a3b8;margin-bottom:24px}
+.section-title{font-size:16px;font-weight:700;margin-bottom:4px;margin-top:32px}
+.section-sub{font-size:13px;color:#94a3b8;margin-bottom:18px}
+.card{background:#fff;border-radius:12px;border:1px solid #e8eaef;padding:24px;margin-bottom:20px}
+.card h3{font-size:15px;font-weight:600;margin-bottom:14px}
+/* OVERVIEW FLOW */
+.overview-flow{display:flex;align-items:center;justify-content:center;gap:0;padding:16px 0}
+.ov-step{background:#f0fdfa;border:1px solid #99f6e4;border-radius:10px;padding:14px 20px;text-align:center;font-size:13px;font-weight:500;min-width:130px}
+.ov-step.highlight{background:#0f766e;color:#fff;border-color:#0f766e}
+.ov-step small{display:block;font-size:11px;color:#94a3b8;margin-top:2px;font-weight:400}
+.ov-step.highlight small{color:rgba(255,255,255,.7)}
+.ov-arrow{color:#94a3b8;font-size:18px;padding:0 8px}
+/* TABS */
+.rule-tabs{display:flex;gap:0;border-bottom:2px solid #e2e4e9;margin-bottom:24px}
+.rule-tab{padding:12px 24px;font-size:14px;font-weight:600;color:#94a3b8;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;transition:.2s;user-select:none}
+.rule-tab:hover{color:#0f766e}
+.rule-tab.active{color:#0f766e;border-bottom-color:#0f766e}
+.tab-content{display:none}.tab-content.active{display:block}
+/* TABLE */
+.table-wrap{background:#fff;border-radius:12px;border:1px solid #e8eaef;overflow:hidden;margin-bottom:20px}
+.table-header{padding:16px 24px;border-bottom:1px solid #e8eaef;display:flex;justify-content:space-between;align-items:center}
+.table-header h3{font-size:15px;font-weight:600}
+.btn{padding:8px 18px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:.2s}
+.btn-primary{background:#0f766e;color:#fff}.btn-primary:hover{background:#0d6357}
+.btn-outline{background:transparent;border:1px solid #e2e4e9;color:#64748b}.btn-outline:hover{border-color:#0f766e;color:#0f766e}
+table{width:100%;border-collapse:collapse}
+thead th{text-align:left;font-size:11px;color:#94a3b8;font-weight:600;text-transform:uppercase;letter-spacing:.5px;padding:10px 16px;border-bottom:1px solid #e8eaef}
+tbody td{padding:12px 16px;font-size:13px;border-bottom:1px solid #f1f3f7}
+tbody tr:last-child td{border-bottom:none}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600}
+.badge.active{background:#dcfce7;color:#16a34a}
+.badge.inactive{background:#f1f3f7;color:#94a3b8}
+.badge.conflict{background:#fee2e2;color:#dc2626}
+/* UNIQUE CHECK */
+.unique-check{background:#fffbeb;border:1px solid #fcd34d;border-radius:10px;padding:14px 18px;margin-top:16px;font-size:13px;color:#92400e;display:flex;align-items:flex-start;gap:10px}
+.unique-check .icon{font-size:16px;flex-shrink:0;margin-top:1px}
+/* DETAIL PANEL */
+.detail-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.25);z-index:200}
+.detail-panel{position:fixed;top:0;right:0;width:600px;height:100vh;background:#fff;z-index:201;overflow-y:auto;padding:32px;box-shadow:-4px 0 24px rgba(0,0,0,.08);transform:translateX(100%);transition:transform .3s ease}
+.detail-panel.open{transform:translateX(0)}
+.detail-panel .close-btn{position:absolute;top:16px;right:16px;width:32px;height:32px;border:none;background:#f1f3f7;border-radius:8px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center}
+.detail-panel h3{font-size:18px;font-weight:700;margin-bottom:4px}
+.detail-panel .dp-meta{font-size:12px;color:#94a3b8;margin-bottom:20px}
+.detail-section{margin-bottom:24px}
+.detail-section h4{font-size:12px;font-weight:600;color:#64748b;margin-bottom:10px;text-transform:uppercase;letter-spacing:.4px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+.form-group label{display:block;font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px}
+.form-group input,.form-group select{width:100%;height:36px;border:1px solid #e2e4e9;border-radius:8px;padding:0 10px;font-size:13px;background:#fff;color:#334155;outline:none}
+.form-group input:focus,.form-group select:focus{border-color:#0f766e}
+.form-group.full{grid-column:1/-1}
+/* KPI */
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:28px}
+.kpi-card{background:#fff;border-radius:12px;padding:18px 22px;border:1px solid #e8eaef}
+.kpi-card .label{font-size:11px;color:#94a3b8;font-weight:600;text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px}
+.kpi-card .value{font-size:26px;font-weight:700}
+.kpi-card .delta{font-size:12px;margin-top:2px;color:#64748b}
+@media(max-width:768px){.kpi-row{grid-template-columns:repeat(2,1fr)}.detail-panel{width:100%}.overview-flow{flex-direction:column}.ov-arrow{transform:rotate(90deg)}.form-row{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<nav class="top-nav">
+  <span class="brand">仓间调拨结算</span>
+  <a href="billing-rules.html" class="active">计费规则</a>
+  <a href="reconciliation.html">对账管理</a>
+  <a href="bill-management.html">账单管理</a>
+  <a href="payment-management.html">付款管理</a>
+</nav>
+
+<div class="flow-bar">
+  <span class="flow-step current">1. 配规则</span>
+  <span class="flow-arrow">→</span>
+  <a href="reconciliation.html" class="flow-step next">2. 对账</a>
+  <span class="flow-arrow">→</span>
+  <a href="bill-management.html" class="flow-step next">3. 出账单</a>
+  <span class="flow-arrow">→</span>
+  <a href="payment-management.html" class="flow-step next">4. 付款</a>
+</div>
+
+<div class="page">
+  <h1 class="page-title">计费规则</h1>
+  <p class="page-sub">为运输任务配置计费准则，规则来源于商务与服务商签署的报价合同</p>
+
+  <!-- OVERVIEW FLOW -->
+  <div class="card">
+    <h3>结算链路概览</h3>
+    <div class="overview-flow">
+      <div class="ov-step highlight">运输任务产生<small>上游 WMS / TMS</small></div>
+      <div class="ov-arrow">→</div>
+      <div class="ov-step highlight">匹配计费规则<small>本页配置</small></div>
+      <div class="ov-arrow">→</div>
+      <div class="ov-step">出账判断<small>对账管理</small></div>
+      <div class="ov-arrow">→</div>
+      <div class="ov-step">聚合账单<small>账单管理</small></div>
+      <div class="ov-arrow">→</div>
+      <div class="ov-step">付款完结<small>付款管理</small></div>
+    </div>
+  </div>
+
+  <!-- KPI -->
+  <div class="kpi-row">
+    <div class="kpi-card"><div class="label">生效规则数</div><div class="value">38</div><div class="delta">覆盖 12 家物流服务商</div></div>
+    <div class="kpi-card"><div class="label">固定计费</div><div class="value">14</div><div class="delta">一口价线路</div></div>
+    <div class="kpi-card"><div class="label">阶梯计费</div><div class="value">18</div><div class="delta">起步价+续公里</div></div>
+    <div class="kpi-card"><div class="label">包月计费</div><div class="value">6</div><div class="delta">按月结算班次</div></div>
+  </div>
+
+  <!-- RULE TABS -->
+  <div class="rule-tabs">
+    <div class="rule-tab active" data-tab="fixed">固定计费</div>
+    <div class="rule-tab" data-tab="tiered">阶梯计费</div>
+    <div class="rule-tab" data-tab="monthly">包月计费</div>
+  </div>
+
+  <!-- FIXED -->
+  <div class="tab-content active" id="tab-fixed">
+    <div class="table-wrap">
+      <div class="table-header"><h3>固定计费规则</h3><button class="btn btn-primary" onclick="openAddRule('fixed')">+ 新增规则</button></div>
+      <table>
+        <thead><tr><th>规则编号</th><th>物流服务商</th><th>线路</th><th>价格 (元)</th><th>生效周期</th><th>状态</th><th>唯一性</th></tr></thead>
+        <tbody>
+          <tr><td style="font-weight:600">FIX-001</td><td>顺丰速运</td><td>广州仓 → 深圳仓</td><td>1,200</td><td>2024.04.01 ~ 2024.09.30</td><td><span class="badge active">生效中</span></td><td><span class="badge active">✓ 通过</span></td></tr>
+          <tr><td style="font-weight:600">FIX-002</td><td>中通快运</td><td>义乌仓 → 杭州仓</td><td>680</td><td>2024.05.01 ~ 2024.12.31</td><td><span class="badge active">生效中</span></td><td><span class="badge active">✓ 通过</span></td></tr>
+          <tr><td style="font-weight:600">FIX-003</td><td>德邦物流</td><td>上海仓 → 南京仓</td><td>950</td><td>2024.03.01 ~ 2024.08.31</td><td><span class="badge inactive">已过期</span></td><td><span class="badge active">✓ 通过</span></td></tr>
+          <tr><td style="font-weight:600">FIX-004</td><td>顺丰速运</td><td>广州仓 → 深圳仓</td><td>1,350</td><td>2024.08.01 ~ 2025.01.31</td><td><span class="badge conflict">冲突</span></td><td><span class="badge conflict">⚠ 与 FIX-001 周期交叉</span></td></tr>
+          <tr><td style="font-weight:600">FIX-005</td><td>京东物流</td><td>北京仓 → 天津仓</td><td>520</td><td>2024.06.01 ~ 2024.12.31</td><td><span class="badge active">生效中</span></td><td><span class="badge active">✓ 通过</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="unique-check">
+      <span class="icon">⚠</span>
+      <div><strong>唯一性校验：</strong>固定计费按「物流服务商 + 生效周期」校验。FIX-004 与 FIX-001 均为顺丰速运广州→深圳线路，且生效周期存在交叉（2024.08.01~2024.09.30），请确认后决定是否启用。</div>
+    </div>
+  </div>
+
+  <!-- TIERED -->
+  <div class="tab-content" id="tab-tiered">
+    <div class="table-wrap">
+      <div class="table-header"><h3>阶梯计费规则</h3><button class="btn btn-primary" onclick="openAddRule('tiered')">+ 新增规则</button></div>
+      <table>
+        <thead><tr><th>规则编号</th><th>服务商</th><th>车型</th><th>适用场景</th><th>起步价</th><th>续公里单价</th><th>生效周期</th><th>状态</th></tr></thead>
+        <tbody>
+          <tr><td style="font-weight:600">TIR-001</td><td>顺丰速运</td><td>4.2m 厢货</td><td>同城调拨</td><td>200 元</td><td>5.5 元/km</td><td>2024.04~2024.12</td><td><span class="badge active">生效中</span></td></tr>
+          <tr><td style="font-weight:600">TIR-002</td><td>顺丰速运</td><td>7.6m 厢货</td><td>同城调拨</td><td>350 元</td><td>8.0 元/km</td><td>2024.04~2024.12</td><td><span class="badge active">生效中</span></td></tr>
+          <tr><td style="font-weight:600">TIR-003</td><td>中通快运</td><td>4.2m 厢货</td><td>跨城调拨</td><td>180 元</td><td>4.8 元/km</td><td>2024.05~2025.04</td><td><span class="badge active">生效中</span></td></tr>
+          <tr><td style="font-weight:600">TIR-004</td><td>德邦物流</td><td>9.6m 大货</td><td>跨城调拨</td><td>500 元</td><td>12.0 元/km</td><td>2024.06~2025.05</td><td><span class="badge active">生效中</span></td></tr>
+          <tr><td style="font-weight:600">TIR-005</td><td>京东物流</td><td>4.2m 厢货</td><td>同城调拨</td><td>220 元</td><td>5.0 元/km</td><td>2024.03~2024.09</td><td><span class="badge inactive">已过期</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="unique-check">
+      <span class="icon">ℹ</span>
+      <div><strong>唯一性校验：</strong>阶梯计费按「服务商 × 生效周期 × 车型 × 适用场景」四维组合校验。当前 18 条规则均通过唯一性校验，无冲突。</div>
+    </div>
+  </div>
+
+  <!-- MONTHLY -->
+  <div class="tab-content" id="tab-monthly">
+    <div class="table-wrap">
+      <div class="table-header"><h3>包月计费规则</h3><button class="btn btn-primary" onclick="openAddRule('monthly')">+ 新增规则</button></div>
+      <table>
+        <thead><tr><th>规则编号</th><th>服务商</th><th>车型</th><th>路线</th><th>月价 (元)</th><th>折算逻辑</th><th>生效周期</th><th>状态</th></tr></thead>
+        <tbody>
+          <tr><td style="font-weight:600">MON-001</td><td>安能物流</td><td>7.6m 厢货</td><td>广州仓 ⇄ 佛山仓</td><td>18,000</td><td>月价 / (自然日 × 可结算时长/24)</td><td>2024.04~2024.12</td><td><span class="badge active">生效中</span></td></tr>
+          <tr><td style="font-weight:600">MON-002</td><td>百世快运</td><td>4.2m 厢货</td><td>上海仓 ⇄ 苏州仓</td><td>12,500</td><td>月价 / (自然日 × 可结算时长/24)</td><td>2024.05~2025.04</td><td><span class="badge active">生效中</span></td></tr>
+          <tr><td style="font-weight:600">MON-003</td><td>安能物流</td><td>9.6m 大货</td><td>深圳仓 ⇄ 东莞仓</td><td>25,000</td><td>月价 / (自然日 × 可结算时长/24)</td><td>2024.06~2025.05</td><td><span class="badge active">生效中</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="unique-check">
+      <span class="icon">ℹ</span>
+      <div><strong>唯一性校验：</strong>包月计费按「物流服务商 + 车型 + 路线 + 生效时间」校验。当前 6 条规则均通过校验。<br><strong>折算说明：</strong>日均费用 = 月价 / 当月自然日数；实际费用 = 日均费用 × (可结算有效时长 / 24)。可结算有效时长由对账模块根据班次实际运营数据计算。</div>
+    </div>
+  </div>
+</div>
+
+<!-- ADD RULE PANEL -->
+<div class="detail-overlay" id="overlay" onclick="closePanel()"></div>
+<div class="detail-panel" id="rulePanel">
+  <button class="close-btn" onclick="closePanel()">✕</button>
+  <h3 id="panelTitle">新增固定计费规则</h3>
+  <p class="dp-meta">根据商务合同配置规则，系统自动进行唯一性校验</p>
+
+  <div class="detail-section">
+    <h4>基本信息</h4>
+    <div class="form-row">
+      <div class="form-group"><label>物流服务商</label><select><option>顺丰速运</option><option>中通快运</option><option>德邦物流</option><option>京东物流</option><option>安能物流</option><option>百世快运</option></select></div>
+      <div class="form-group"><label>线路</label><input type="text" placeholder="如：广州仓 → 深圳仓"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>生效开始日期</label><input type="date"></div>
+      <div class="form-group"><label>生效结束日期</label><input type="date"></div>
+    </div>
+  </div>
+
+  <div class="detail-section">
+    <h4>计费参数</h4>
+    <div class="form-row">
+      <div class="form-group"><label>价格 (元/趟)</label><input type="number" placeholder="如 1200"></div>
+      <div class="form-group"><label>车型</label><select><option>4.2m 厢货</option><option>7.6m 厢货</option><option>9.6m 大货</option><option>不限</option></select></div>
+    </div>
+  </div>
+
+  <div class="detail-section">
+    <h4>唯一性预检</h4>
+    <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:14px 18px;font-size:13px;color:#166534">
+      ✓ 当前配置与已有规则无冲突，可安全启用
+    </div>
+  </div>
+
+  <div style="display:flex;gap:12px;justify-content:flex-end;margin-top:24px">
+    <button class="btn btn-outline" onclick="closePanel()">取消</button>
+    <button class="btn btn-primary" onclick="closePanel()">保存并启用</button>
+  </div>
+</div>
+
+<script>
+document.querySelectorAll('.rule-tab').forEach(t=>{t.addEventListener('click',()=>{document.querySelectorAll('.rule-tab').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));t.classList.add('active');document.getElementById('tab-'+t.dataset.tab).classList.add('active')})});
+const titles={fixed:'新增固定计费规则',tiered:'新增阶梯计费规则',monthly:'新增包月计费规则'};
+function openAddRule(type){document.getElementById('panelTitle').textContent=titles[type]||'新增规则';document.getElementById('overlay').style.display='block';document.getElementById('rulePanel').classList.add('open')}
+function closePanel(){document.getElementById('overlay').style.display='none';document.getElementById('rulePanel').classList.remove('open')}
+</script>
+</body>
+</html>

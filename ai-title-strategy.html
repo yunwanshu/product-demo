@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI 标题策略库 — AIGC商品优化平台</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f5f6fa;color:#1a1a2e;line-height:1.6}
+.top-nav{background:#fff;border-bottom:1px solid #e2e4e9;display:flex;align-items:center;padding:0 32px;height:56px;position:sticky;top:0;z-index:100}
+.top-nav .brand{font-size:15px;font-weight:700;color:#4f46e5;margin-right:40px;letter-spacing:-.3px}
+.top-nav a{text-decoration:none;color:#64748b;font-size:14px;font-weight:500;padding:16px 16px;border-bottom:2px solid transparent;transition:.2s}
+.top-nav a:hover{color:#4f46e5}.top-nav a.active{color:#4f46e5;border-bottom-color:#4f46e5}
+.agent-bar{background:linear-gradient(90deg,#4f46e5,#6366f1);padding:10px 32px;display:flex;align-items:center;gap:12px;overflow-x:auto}
+.agent-bar .ab-label{color:rgba(255,255,255,.7);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap}
+.agent-bar .ab-step{padding:5px 14px;border-radius:16px;font-size:12px;font-weight:600;white-space:nowrap;cursor:pointer;transition:.2s;text-decoration:none}
+.agent-bar .ab-step.current{background:rgba(255,255,255,.2);color:#fff}
+.agent-bar .ab-step.done{background:rgba(255,255,255,.1);color:rgba(255,255,255,.6)}
+.agent-bar .ab-step.next{background:transparent;color:rgba(255,255,255,.35);border:1px dashed rgba(255,255,255,.25)}
+.agent-bar .ab-arrow{color:rgba(255,255,255,.3);font-size:14px}
+.page{max-width:1240px;margin:0 auto;padding:24px 32px 60px}
+.page-title{font-size:22px;font-weight:700;margin-bottom:4px}
+.page-sub{font-size:13px;color:#94a3b8;margin-bottom:24px}
+.section-title{font-size:16px;font-weight:700;margin-bottom:4px;margin-top:36px;display:flex;align-items:center;gap:8px}
+.section-title .badge-agent{font-size:10px;font-weight:700;background:#eef2ff;color:#4f46e5;padding:3px 10px;border-radius:10px;text-transform:uppercase;letter-spacing:.4px}
+.section-sub{font-size:13px;color:#94a3b8;margin-bottom:18px}
+.card{background:#fff;border-radius:12px;border:1px solid #e8eaef;padding:24px;margin-bottom:20px}
+.card h3{font-size:15px;font-weight:600;margin-bottom:14px}
+/* WORKFLOW */
+.workflow{display:flex;align-items:stretch;gap:0;overflow-x:auto;padding:4px 0 12px}
+.wf-step{flex:1;min-width:130px;background:#fff;border:1px solid #e8eaef;border-radius:12px;padding:16px 14px;text-align:center;position:relative}
+.wf-step .wf-num{width:26px;height:26px;border-radius:50%;background:#4f46e5;color:#fff;font-size:11px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;margin-bottom:6px}
+.wf-step .wf-title{font-size:13px;font-weight:600;margin-bottom:4px}
+.wf-step .wf-desc{font-size:11px;color:#94a3b8;line-height:1.5}
+.wf-step.agent{border-color:#c7d2fe;background:#eef2ff}
+.wf-step.agent .wf-num{background:#6366f1}
+.wf-step.loop{border-color:#fcd34d;background:#fffbeb}
+.wf-step.loop .wf-num{background:#f59e0b}
+.wf-arrow{display:flex;align-items:center;padding:0 3px;color:#cbd5e1;font-size:16px;flex-shrink:0}
+/* LLM JUDGE */
+.judge-pipeline{display:grid;grid-template-columns:2fr 3fr;gap:20px}
+.judge-left{display:flex;flex-direction:column;gap:12px}
+.judge-dim{background:#f8f9fc;border:1px solid #e8eaef;border-radius:10px;padding:14px 16px;display:flex;align-items:center;gap:12px}
+.judge-dim .jd-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.judge-dim .jd-name{font-size:13px;font-weight:600}
+.judge-dim .jd-desc{font-size:11px;color:#94a3b8}
+.judge-dim .jd-score{margin-left:auto;font-size:20px;font-weight:700;color:#1a1a2e}
+.judge-right{background:#f8f9fc;border:1px solid #e8eaef;border-radius:10px;padding:18px 20px}
+.judge-right .jr-title{font-size:12px;font-weight:600;color:#64748b;margin-bottom:10px;text-transform:uppercase;letter-spacing:.4px}
+.judge-right .jr-sample{font-size:13px;line-height:1.7;padding:10px 0;border-bottom:1px solid #e8eaef}
+.judge-right .jr-sample:last-child{border-bottom:none}
+.judge-right .jr-label{font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px}
+.judge-right .jr-bar{height:6px;border-radius:3px;background:#e2e4e9;overflow:hidden;margin-top:4px}
+.judge-right .jr-fill{height:100%;border-radius:3px}
+/* ITERATION LOOP */
+.iter-loop{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.iter-card{background:#f8f9fc;border:1px solid #e8eaef;border-radius:12px;padding:20px}
+.iter-card .ic-header{font-size:13px;font-weight:600;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.iter-card .ic-header .ic-dot{width:8px;height:8px;border-radius:50%}
+.iter-card .ic-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #e8eaef;font-size:13px}
+.iter-card .ic-row:last-child{border-bottom:none}
+.iter-card .ic-change{font-size:11px;padding:2px 8px;border-radius:8px;font-weight:600}
+.iter-card .ic-change.improve{background:#dcfce7;color:#16a34a}
+.iter-card .ic-change.regress{background:#fee2e2;color:#dc2626}
+/* TRANSFER */
+.transfer-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.transfer-card{background:#fff;border:1px solid #e8eaef;border-radius:12px;padding:18px;position:relative;overflow:hidden}
+.transfer-card .tc-from-to{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:600;margin-bottom:10px}
+.transfer-card .tc-flag{font-size:18px}
+.transfer-card .tc-arrow{color:#cbd5e1}
+.transfer-card .tc-status{font-size:11px;font-weight:700;padding:3px 10px;border-radius:10px;margin-bottom:8px;display:inline-block}
+.transfer-card .tc-status.ready{background:#dcfce7;color:#16a34a}
+.transfer-card .tc-status.pending{background:#fef3c7;color:#d97706}
+.transfer-card .tc-status.tested{background:#dbeafe;color:#2563eb}
+.transfer-card .tc-desc{font-size:12px;color:#64748b;line-height:1.6}
+.transfer-card .tc-similarity{margin-top:8px;font-size:12px;font-weight:600;color:#4f46e5}
+/* COUNTRY TABS */
+.country-bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px}
+.country-chip{padding:8px 18px;border-radius:20px;font-size:13px;font-weight:500;border:1px solid #e2e4e9;background:#fff;cursor:pointer;transition:.2s;user-select:none}
+.country-chip:hover{border-color:#818cf8;color:#4f46e5}
+.country-chip.active{background:#4f46e5;color:#fff;border-color:#4f46e5}
+/* PROMPT GRID */
+.prompt-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:12px}
+.prompt-card{background:#fff;border:1px solid #e8eaef;border-radius:12px;padding:20px;cursor:pointer;transition:.2s}
+.prompt-card:hover{border-color:#818cf8;box-shadow:0 2px 12px rgba(79,70,229,.08)}
+.prompt-card .cat{font-size:14px;font-weight:600;margin-bottom:8px;display:flex;align-items:center;gap:8px}
+.prompt-card .cat .dot{width:8px;height:8px;border-radius:50%}
+.prompt-card .preview{font-size:12px;color:#64748b;line-height:1.7;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;margin-bottom:12px;font-family:'SF Mono',Menlo,monospace}
+.prompt-card .meta-row{display:flex;justify-content:space-between;align-items:center;font-size:11px;color:#94a3b8}
+.prompt-card .version{background:#eef2ff;color:#4338ca;padding:2px 8px;border-radius:10px;font-weight:600;font-size:10px}
+.prompt-card .judge-score{background:#dcfce7;color:#16a34a;padding:2px 8px;border-radius:10px;font-weight:600;font-size:10px}
+/* DETAIL */
+.detail-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.25);z-index:200}
+.detail-panel{position:fixed;top:0;right:0;width:680px;height:100vh;background:#fff;z-index:201;overflow-y:auto;padding:32px;box-shadow:-4px 0 24px rgba(0,0,0,.08);transform:translateX(100%);transition:transform .3s ease}
+.detail-panel.open{transform:translateX(0)}
+.detail-panel .close-btn{position:absolute;top:16px;right:16px;width:32px;height:32px;border:none;background:#f1f3f7;border-radius:8px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center}
+.detail-panel h3{font-size:18px;font-weight:700;margin-bottom:4px}
+.detail-panel .dp-meta{font-size:12px;color:#94a3b8;margin-bottom:20px}
+.detail-section{margin-bottom:24px}
+.detail-section h4{font-size:12px;font-weight:600;color:#64748b;margin-bottom:10px;text-transform:uppercase;letter-spacing:.4px}
+.prompt-block{background:#f8f9fc;border:1px solid #e2e4e9;border-radius:10px;padding:18px 20px;font-size:13px;line-height:1.8;font-family:'SF Mono',Menlo,monospace;white-space:pre-wrap;color:#334155}
+.version-list{list-style:none;padding:0}
+.version-item{display:flex;gap:16px;padding:14px 0;border-bottom:1px solid #f1f3f7}
+.version-item:last-child{border-bottom:none}
+.version-item .v-tag{width:44px;height:24px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0}
+.version-item .v-tag.current{background:#dcfce7;color:#16a34a}
+.version-item .v-tag.prev{background:#f1f3f7;color:#64748b}
+.version-item .v-date{font-size:11px;color:#94a3b8;margin-bottom:4px}
+.version-item .v-desc{font-size:13px}
+.version-item .v-result{font-size:12px;color:#4f46e5;font-weight:500;margin-top:4px}
+/* TEMPLATES */
+.tmpl-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.tmpl-card{background:#fff;border:1px solid #e8eaef;border-radius:12px;padding:20px}
+.tmpl-card .tmpl-cat{font-size:14px;font-weight:600;margin-bottom:6px}
+.tmpl-card .tmpl-desc{font-size:12px;color:#64748b;line-height:1.6}
+.tmpl-card .tmpl-use{margin-top:12px;font-size:12px;color:#4f46e5;font-weight:600;cursor:pointer}
+.tmpl-card .tmpl-use:hover{text-decoration:underline}
+@media(max-width:900px){.prompt-grid,.tmpl-grid,.transfer-grid{grid-template-columns:1fr 1fr}.judge-pipeline,.iter-loop{grid-template-columns:1fr}}
+@media(max-width:600px){.prompt-grid,.tmpl-grid,.transfer-grid{grid-template-columns:1fr}.detail-panel{width:100%}}
+</style>
+</head>
+<body>
+
+<nav class="top-nav">
+  <span class="brand">AIGC 商品优化</span>
+  <a href="experiment-platform.html">实验平台</a>
+  <a href="translation-platform.html">翻译平台</a>
+  <a href="ai-title-strategy.html" class="active">AI 标题策略库</a>
+</nav>
+
+<div class="agent-bar">
+  <span class="ab-label">Agent Pipeline</span>
+  <span class="ab-step current">策略生成 & 迭代</span>
+  <span class="ab-arrow">→</span>
+  <a href="translation-platform.html" class="ab-step next" style="text-decoration:none">翻译适配</a>
+  <span class="ab-arrow">→</span>
+  <a href="experiment-platform.html" class="ab-step next" style="text-decoration:none">实验验证</a>
+  <span class="ab-arrow">→</span>
+  <span class="ab-step next">效果回流 → 自迭代</span>
+</div>
+
+<div class="page">
+  <h1 class="page-title">AI 标题策略库</h1>
+  <p class="page-sub">LLM-as-Judge 自动评估，Prompt 自进化迭代，跨国家智能迁移</p>
+
+  <!-- WORKFLOW (UPDATED) -->
+  <h2 class="section-title">Prompt 调优工作流 <span class="badge-agent">Agent 增强</span></h2>
+  <p class="section-sub">紫色步骤由 Agent 自动执行，黄色步骤为 Agent 建议 + 人工确认</p>
+
+  <div class="workflow">
+    <div class="wf-step"><div class="wf-num">1</div><div class="wf-title">需求分析</div><div class="wf-desc">品类特征<br>市场洞察<br>竞品拆解</div></div>
+    <div class="wf-arrow">→</div>
+    <div class="wf-step agent"><div class="wf-num">2</div><div class="wf-title">Prompt 生成</div><div class="wf-desc">基于模板<br>+ 跨国家迁移<br>+ 历史教训注入</div></div>
+    <div class="wf-arrow">→</div>
+    <div class="wf-step agent"><div class="wf-num">3</div><div class="wf-title">LLM-as-Judge</div><div class="wf-desc">自动批量生成<br>四维自动评分<br>替代人工抽样</div></div>
+    <div class="wf-arrow">→</div>
+    <div class="wf-step loop"><div class="wf-num">4</div><div class="wf-title">Agent 迭代</div><div class="wf-desc">定位问题维度<br>生成修改建议<br>人确认即可</div></div>
+    <div class="wf-arrow">→</div>
+    <div class="wf-step"><div class="wf-num">5</div><div class="wf-title">AB 实验</div><div class="wf-desc">自动创建实验<br>智能分配流量<br>贝叶斯监控</div></div>
+    <div class="wf-arrow">→</div>
+    <div class="wf-step agent"><div class="wf-num">6</div><div class="wf-title">效果回流</div><div class="wf-desc">实验结论自动<br>回写到策略库<br>触发迁移/迭代</div></div>
+  </div>
+
+  <!-- LLM-as-JUDGE -->
+  <h2 class="section-title">LLM-as-Judge 自动评估 <span class="badge-agent">Agent</span></h2>
+  <p class="section-sub">四维自动评分替代人工抽样，评估吞吐量从 200 条/天 → 50,000 条/分钟</p>
+
+  <div class="card">
+    <div class="judge-pipeline">
+      <div class="judge-left">
+        <div class="judge-dim"><div class="jd-icon" style="background:#dbeafe;color:#2563eb">📋</div><div><div class="jd-name">信息完整性</div><div class="jd-desc">核心属性是否齐全（品类/材质/尺寸/颜色/风格）</div></div><div class="jd-score">8.2</div></div>
+        <div class="judge-dim"><div class="jd-icon" style="background:#dcfce7;color:#16a34a">📖</div><div><div class="jd-name">可读性</div><div class="jd-desc">语法自然度、词序流畅性、长度合规</div></div><div class="jd-score">7.8</div></div>
+        <div class="judge-dim"><div class="jd-icon" style="background:#fef3c7;color:#d97706">⚖</div><div><div class="jd-name">合规性</div><div class="jd-desc">无营销违禁词、符合目标市场法规要求</div></div><div class="jd-score">9.5</div></div>
+        <div class="judge-dim"><div class="jd-icon" style="background:#f3e8ff;color:#7c3aed">🔍</div><div><div class="jd-name">搜索友好度</div><div class="jd-desc">关键词布局、搜索意图匹配、长尾词覆盖</div></div><div class="jd-score">7.1</div></div>
+      </div>
+      <div class="judge-right">
+        <div class="jr-title">评估样本（美国 · 服饰 · V4 Prompt 生成结果）</div>
+        <div class="jr-sample">
+          <div class="jr-label">Input 属性</div>
+          品类:连衣裙 | 材质:涤纶混纺 | 风格:韩版 | 季节:春夏 | 颜色:藏青 | 尺码:S-XXL
+        </div>
+        <div class="jr-sample">
+          <div class="jr-label">生成标题</div>
+          Korean Style A-Line Dress Breathable Poly Blend Navy Spring Summer S-XXL
+          <div class="jr-bar"><div class="jr-fill" style="width:88%;background:#22c55e"></div></div>
+          <small style="color:#16a34a;font-weight:600">综合 8.8 — 信息完整，可读性优秀</small>
+        </div>
+        <div class="jr-sample">
+          <div class="jr-label">生成标题</div>
+          Navy Korean Style Midi Dress for Spring Summer Lightweight Polyester Blend Available S to XXL
+          <div class="jr-bar"><div class="jr-fill" style="width:72%;background:#f59e0b"></div></div>
+          <small style="color:#d97706;font-weight:600">综合 7.2 — 长度偏长(92字符)，"for"连接词冗余</small>
+        </div>
+        <div class="jr-sample">
+          <div class="jr-label">生成标题</div>
+          Summer Dress Navy Blue Women Korean Fashion A Line Polyester S XXL
+          <div class="jr-bar"><div class="jr-fill" style="width:61%;background:#dc2626"></div></div>
+          <small style="color:#dc2626;font-weight:600">综合 6.1 — 缺少"breathable"等季节性卖点，词序不自然</small>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PROMPT ITERATION FEEDBACK -->
+  <h2 class="section-title">Prompt 自迭代反馈循环 <span class="badge-agent">Agent</span></h2>
+  <p class="section-sub">Agent 对比新旧版本评分差异，定位问题维度，生成修改建议</p>
+
+  <div class="card">
+    <div class="iter-loop">
+      <div class="iter-card">
+        <div class="ic-header"><div class="ic-dot" style="background:#22c55e"></div>美国 · 服饰 · V3 → V4 迭代分析</div>
+        <div class="ic-row"><span>信息完整性</span><span style="margin-left:auto;font-weight:700">7.8 → 8.2</span><span class="ic-change improve">+0.4</span></div>
+        <div class="ic-row"><span>可读性</span><span style="margin-left:auto;font-weight:700">7.5 → 7.8</span><span class="ic-change improve">+0.3</span></div>
+        <div class="ic-row"><span>合规性</span><span style="margin-left:auto;font-weight:700">9.3 → 9.5</span><span class="ic-change improve">+0.2</span></div>
+        <div class="ic-row"><span>搜索友好度</span><span style="margin-left:auto;font-weight:700">6.8 → 7.1</span><span class="ic-change improve">+0.3</span></div>
+        <div style="margin-top:12px;padding:12px;background:#f0fdf4;border-radius:8px;font-size:12px;color:#166534;line-height:1.6">
+          <strong>Agent 诊断：</strong>V3 增加了"trending""viral"等社媒用语禁止列表后，合规性和搜索友好度同步提升。V4 无显著回归维度。<br><strong>建议：</strong>当前版本已达边际收益递减点（V3→V4 综合提升仅 +0.3），建议停止迭代，转向新类目。
+        </div>
+      </div>
+      <div class="iter-card">
+        <div class="ic-header"><div class="ic-dot" style="background:#f59e0b"></div>德国 · 工具 · V1 → V2 迭代分析</div>
+        <div class="ic-row"><span>信息完整性</span><span style="margin-left:auto;font-weight:700">7.2 → 6.5</span><span class="ic-change regress">-0.7</span></div>
+        <div class="ic-row"><span>可读性</span><span style="margin-left:auto;font-weight:700">6.8 → 7.9</span><span class="ic-change improve">+1.1</span></div>
+        <div class="ic-row"><span>合规性</span><span style="margin-left:auto;font-weight:700">8.5 → 8.8</span><span class="ic-change improve">+0.3</span></div>
+        <div class="ic-row"><span>搜索友好度</span><span style="margin-left:auto;font-weight:700">6.2 → 6.8</span><span class="ic-change improve">+0.6</span></div>
+        <div style="margin-top:12px;padding:12px;background:#fef3c7;border-radius:8px;font-size:12px;color:#92400e;line-height:1.6">
+          <strong>Agent 诊断：</strong>V2 强制使用德语技术术语（Akkuschrauber 替代 cordless drill），可读性大幅提升但信息完整性下降——部分德语术语过于专业，买家搜索时仍用英语借词。<br><strong>建议：</strong>V3 应增加"德语专业词 + 英语借词双语并存"规则，如 "Akkuschrauber (Cordless Drill)"。
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CROSS-COUNTRY TRANSFER -->
+  <h2 class="section-title">跨国家 Prompt 智能迁移 <span class="badge-agent">Agent</span></h2>
+  <p class="section-sub">从已验证市场自动迁移策略到新市场，跳过从 V1 到 V3 的试错成本</p>
+
+  <div class="transfer-grid">
+    <div class="transfer-card">
+      <div class="tc-from-to"><span class="tc-flag">🇺🇸</span><span class="tc-arrow">→</span><span class="tc-flag">🇬🇧</span><span>US 服饰 V4 → UK</span></div>
+      <span class="tc-status ready">已生成候选</span>
+      <div class="tc-desc">自动适配：英式拼写(colour/jewellery)、UK尺码格式、Autumn替代Fall、去除"trainers"歧义</div>
+      <div class="tc-similarity">市场相似度 87% · 预计跳过 V1-V2 迭代</div>
+    </div>
+    <div class="transfer-card">
+      <div class="tc-from-to"><span class="tc-flag">🇺🇸</span><span class="tc-arrow">→</span><span class="tc-flag">🇩🇪</span><span>US 工具 V3 → DE</span></div>
+      <span class="tc-status tested">已验证</span>
+      <div class="tc-desc">自动适配：公制单位、德语技术术语映射表、DIN/EN认证规则注入、230V电压</div>
+      <div class="tc-similarity">市场相似度 72% · 实验结果 GMV +5.1% (p&lt;0.01)</div>
+    </div>
+    <div class="transfer-card">
+      <div class="tc-from-to"><span class="tc-flag">🇺🇸</span><span class="tc-arrow">→</span><span class="tc-flag">🇯🇵</span><span>US 家居 V3 → JP</span></div>
+      <span class="tc-status pending">待人工确认</span>
+      <div class="tc-desc">自动适配：日文风格词(シンプル/ナチュラル)、cm→保持、增加紧凑设计强调、和室场景</div>
+      <div class="tc-similarity">市场相似度 58% · 文化差异较大，建议小批量先验证</div>
+    </div>
+    <div class="transfer-card">
+      <div class="tc-from-to"><span class="tc-flag">🇺🇸</span><span class="tc-arrow">→</span><span class="tc-flag">🇫🇷</span><span>US 美妆 V4 → FR</span></div>
+      <span class="tc-status ready">已生成候选</span>
+      <div class="tc-desc">自动适配：法语化妆品宣称合规规则、容量ml标注、肤质词法语化、EU成分法规检查</div>
+      <div class="tc-similarity">市场相似度 76% · 合规规则差异已自动标注</div>
+    </div>
+    <div class="transfer-card">
+      <div class="tc-from-to"><span class="tc-flag">🇩🇪</span><span class="tc-arrow">→</span><span class="tc-flag">🇰🇷</span><span>DE 工具 V2 → KR</span></div>
+      <span class="tc-status pending">待人工确认</span>
+      <div class="tc-desc">自动适配：220V/60Hz韩国标准、KS认证、韩文技术术语映射、公制保持</div>
+      <div class="tc-similarity">市场相似度 61% · 电压差异已自动校正</div>
+    </div>
+    <div class="transfer-card">
+      <div class="tc-from-to"><span class="tc-flag">🇺🇸</span><span class="tc-arrow">→</span><span class="tc-flag">🇸🇦</span><span>US 服饰 V4 → SA</span></div>
+      <span class="tc-status pending">待人工确认</span>
+      <div class="tc-desc">自动适配：端庄时尚关键词注入、沙漠气候面料强调(透气/轻量)、文化敏感性审查</div>
+      <div class="tc-similarity">市场相似度 45% · 文化差异极大，强烈建议先小批量验证</div>
+    </div>
+  </div>
+
+  <!-- COUNTRY × CATEGORY MATRIX -->
+  <h2 class="section-title" style="margin-top:40px">国家 × 类目 Prompt 矩阵</h2>
+  <p class="section-sub">选择目标国家查看已沉淀的 Prompt 策略，评分来自 LLM-as-Judge 自动评估</p>
+
+  <div class="country-bar" id="countryBar">
+    <div class="country-chip active" data-ctry="US">🇺🇸 美国</div>
+    <div class="country-chip" data-ctry="UK">🇬🇧 英国</div>
+    <div class="country-chip" data-ctry="DE">🇩🇪 德国</div>
+    <div class="country-chip" data-ctry="FR">🇫🇷 法国</div>
+    <div class="country-chip" data-ctry="JP">🇯🇵 日本</div>
+    <div class="country-chip" data-ctry="ES">🇪🇸 西班牙</div>
+  </div>
+  <div class="prompt-grid" id="promptGrid"></div>
+
+  <!-- TEMPLATES -->
+  <h2 class="section-title" style="margin-top:40px">Prompt 基础模板</h2>
+  <p class="section-sub">各类目的起始 Prompt 模板，Agent 迁移时会自动选择对应模板并注入目标市场规则</p>
+
+  <div class="tmpl-grid">
+    <div class="tmpl-card"><div class="tmpl-cat">👗 服饰类目</div><div class="tmpl-desc">强调材质、版型、适用场景、季节属性；前置核心品类词；禁止营销词；控制 80-120 字符长度</div><div class="tmpl-use">+ Agent 自动适配新市场</div></div>
+    <div class="tmpl-card"><div class="tmpl-cat">🔧 工具类目</div><div class="tmpl-desc">突出规格参数、适用材质、包装清单；单位适配目标市场（公制/英制）；禁止模糊描述</div><div class="tmpl-use">+ Agent 自动适配新市场</div></div>
+    <div class="tmpl-card"><div class="tmpl-cat">🏠 家居类目</div><div class="tmpl-desc">聚焦风格、材质、尺寸、适用空间；颜色用标准色名；包含安装方式关键词</div><div class="tmpl-use">+ Agent 自动适配新市场</div></div>
+    <div class="tmpl-card"><div class="tmpl-cat">💄 美妆类目</div><div class="tmpl-desc">功效关键词、适用肤质、核心成分；容量/色号必选；遵守各国化妆品合规</div><div class="tmpl-use">+ Agent 自动适配新市场</div></div>
+    <div class="tmpl-card"><div class="tmpl-cat">📱 3C 类目</div><div class="tmpl-desc">品牌+型号+核心规格+兼容性；禁止夸大参数；适配目标市场认证标识</div><div class="tmpl-use">+ Agent 自动适配新市场</div></div>
+    <div class="tmpl-card"><div class="tmpl-cat">🐾 宠物类目</div><div class="tmpl-desc">适用宠物种类+体型+年龄段；材质安全性；容量/重量；突出功能差异点</div><div class="tmpl-use">+ Agent 自动适配新市场</div></div>
+  </div>
+</div>
+
+<!-- DETAIL PANEL -->
+<div class="detail-overlay" id="overlay" onclick="closeDetail()"></div>
+<div class="detail-panel" id="detailPanel">
+  <button class="close-btn" onclick="closeDetail()">✕</button>
+  <h3 id="dpTitle"></h3>
+  <p class="dp-meta" id="dpMeta"></p>
+  <div class="detail-section"><h4>当前 Prompt</h4><div class="prompt-block" id="dpPrompt"></div></div>
+  <div class="detail-section"><h4>LLM-as-Judge 评分趋势</h4>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px" id="dpScores"></div>
+  </div>
+  <div class="detail-section"><h4>版本迭代历史</h4><ul class="version-list" id="dpVersions"></ul></div>
+</div>
+
+<script>
+const promptData={
+  US:[
+    {cat:'服饰',dot:'#818cf8',preview:'You are a senior e-commerce copywriter for the US market. Generate a product title for a women\'s dress. Rules: 1) Start with core category. 2) Include material, style, season. 3) 80-120 chars.',version:'V4',judgeScore:'8.6',date:'2024.06.15',
+     prompt:'You are a senior e-commerce copywriter specializing in the US fashion market.\n\nTask: Generate a product title for the following item.\n\nRules:\n1. Start with the core category keyword\n2. Include: material, style/fit, season, key design feature\n3. Length: 80–120 characters\n4. Forbidden: hot, new, best, sale, cheap, trending, viral\n5. American English spelling\n6. Colors: standard names (navy, burgundy, sage)\n\nInput: {product_attributes}\nOutput: [Generated Title]',
+     scores:{info:'8.2',read:'7.8',comp:'9.5',search:'7.1'},
+     versions:[
+       {tag:'V4',cls:'current',date:'2024.06.15',desc:'Agent 建议：增加负向约束"trending""viral"等社媒用语',result:'Judge 8.6 (+0.3) | ABTest CTR +5.2%, GMV +7.1%'},
+       {tag:'V3',cls:'prev',date:'2024.05.28',desc:'Agent 建议：放宽长度限制 60-100 → 80-120',result:'Judge 8.3 (+0.5) | CTR +4.1%'},
+       {tag:'V2',cls:'prev',date:'2024.05.10',desc:'人工：增加季节属性必填，few-shot 示例 1→3',result:'Judge 7.8 (+0.8) | CTR +2.8%'},
+       {tag:'V1',cls:'prev',date:'2024.04.22',desc:'初始版本（模板自动生成）',result:'Judge 7.0 | CTR +1.5% (不显著)'},
+     ]},
+    {cat:'工具',dot:'#f59e0b',preview:'Technical product copywriter for US tools. Brand+Model+Spec format. Imperial units. Top 3 specs by buyer importance.',version:'V3',judgeScore:'8.1',date:'2024.06.08',
+     prompt:'Technical copywriter for US hardware/tools.\n\n1. Format: [Brand] [Model] [Core Spec] [Use Case]\n2. Include: voltage/power, key dimension (imperial), weight\n3. Top 3 specs by buyer importance\n4. Length: 100–150 characters\n5. No vague words\n\nInput: {product_attributes}\nOutput: [Generated Title]',
+     scores:{info:'8.5',read:'7.4',comp:'9.0',search:'7.5'},
+     versions:[
+       {tag:'V3',cls:'current',date:'2024.06.08',desc:'Agent 建议：增加英制单位强制转换规则',result:'Judge 8.1 (+0.4) | CTR +3.8%'},
+       {tag:'V2',cls:'prev',date:'2024.05.15',desc:'Agent 建议：规格排序改为按买家重要性',result:'Judge 7.7 (+0.6) | CTR +2.1%'},
+       {tag:'V1',cls:'prev',date:'2024.04.30',desc:'初始版本',result:'Judge 7.1 | CTR +0.9%'},
+     ]},
+    {cat:'家居',dot:'#10b981',preview:'Interior design-aware copywriter for US home. Style keyword first. Material+color+room context. Easy Assembly keyword.',version:'V3',judgeScore:'8.8',date:'2024.06.18',
+     prompt:'Interior design copywriter for US home décor.\n\n1. Start with style (Modern, Mid-Century, Farmhouse)\n2. Include: material, color, dimension (inches)\n3. Room context (Living Room, Bedroom)\n4. Assembly info keyword\n5. Length: 90–140 characters\n\nInput: {product_attributes}\nOutput: [Generated Title]',
+     scores:{info:'8.9',read:'8.2',comp:'9.6',search:'8.4'},
+     versions:[
+       {tag:'V3',cls:'current',date:'2024.06.18',desc:'Agent 建议：增加安装方式规则（Easy Assembly）',result:'Judge 8.8 (+0.5) | CTR +6.1%, GMV +8.3%'},
+       {tag:'V2',cls:'prev',date:'2024.05.22',desc:'Agent 建议：风格词前置+增加房间场景词',result:'Judge 8.3 (+1.0) | CTR +4.2%'},
+       {tag:'V1',cls:'prev',date:'2024.05.01',desc:'初始版本',result:'Judge 7.3 | CTR +1.8%'},
+     ]},
+  ],
+  UK:[
+    {cat:'服饰',dot:'#818cf8',preview:'UK fashion. British English (colour, jewellery, trainers). UK sizing. Autumn not Fall.',version:'V2',judgeScore:'7.9',date:'2024.06.01',
+     prompt:'UK fashion e-commerce copywriter.\n\n1. British English: colour, jewellery, cosy, trainers\n2. UK sizing (UK 8, UK 10)\n3. "Autumn" not "Fall"\n4. Include: category, material, fit, occasion\n5. Length: 80–120 chars\n\nInput: {product_attributes}\nOutput: [Generated Title]',
+     scores:{info:'7.8',read:'8.0',comp:'8.5',search:'7.3'},
+     versions:[
+       {tag:'V2',cls:'current',date:'2024.06.01',desc:'Agent 从 US V4 迁移 + 英式英语适配',result:'Judge 7.9 (+1.2) | CTR +3.4%'},
+       {tag:'V1',cls:'prev',date:'2024.05.08',desc:'初始版本（直接复用US模板）',result:'Judge 6.7 | CTR +0.6%'},
+     ]},
+    {cat:'工具',dot:'#f59e0b',preview:'UK tools. Metric units. BS/EN certification. 230V standard.',version:'V1',judgeScore:'7.5',date:'2024.05.20',
+     prompt:'UK tools market copywriter.\n1. Metric primary\n2. 230V UK standard\n3. BS/EN certification\n4. Length: 100–140 chars\n\nInput: {product_attributes}\nOutput: [Generated Title]',
+     scores:{info:'7.6',read:'7.2',comp:'8.0',search:'7.2'},
+     versions:[{tag:'V1',cls:'current',date:'2024.05.20',desc:'Agent 从 US V3 迁移 + 公制+英标适配',result:'Judge 7.5 | CTR +2.2%'}]},
+    {cat:'家居',dot:'#10b981',preview:'UK home. Country Cottage, Victorian style. Metric cm. British colour spelling.',version:'V2',judgeScore:'8.0',date:'2024.06.12',
+     prompt:'UK home décor copywriter.\n1. Styles: Country Cottage, Victorian, Contemporary\n2. Dimensions cm\n3. British colour spelling\n4. Room context\n5. Length: 90–130 chars\n\nInput: {product_attributes}\nOutput: [Generated Title]',
+     scores:{info:'8.0',read:'7.8',comp:'8.5',search:'7.7'},
+     versions:[
+       {tag:'V2',cls:'current',date:'2024.06.12',desc:'Agent 建议：增加英国特色风格词',result:'Judge 8.0 (+0.7)'},
+       {tag:'V1',cls:'prev',date:'2024.05.28',desc:'初始版本',result:'Judge 7.3'},
+     ]},
+  ],
+  DE:[
+    {cat:'服饰',dot:'#818cf8',preview:'German fashion. Compound nouns. EU sizing. Gender-specific articles.',version:'V2',judgeScore:'7.8',date:'2024.05.25',
+     prompt:'Deutscher Mode-Texter.\n1. Deutsche Komposita\n2. EU-Größen (Gr. 38)\n3. Material (deutsch)\n4. Länge: 80–130 Zeichen\n\nInput: {product_attributes}\nOutput: [Generierter Titel]',
+     scores:{info:'7.7',read:'8.0',comp:'8.2',search:'7.3'},
+     versions:[
+       {tag:'V2',cls:'current',date:'2024.05.25',desc:'Agent 从 US V4 迁移 + 德语复合词规则',result:'Judge 7.8 | CTR +4.0%'},
+       {tag:'V1',cls:'prev',date:'2024.04.28',desc:'初始版本',result:'Judge 6.9'},
+     ]},
+    {cat:'工具',dot:'#f59e0b',preview:'German tools. DIN/EN norms. German technical terms (Akkuschrauber). Metric. 230V.',version:'V2',judgeScore:'8.3',date:'2024.06.05',
+     prompt:'Technischer Texter — deutscher Werkzeugmarkt.\n1. Metric (cm, kg, Watt)\n2. DIN/EN norms\n3. 230V\n4. German technical terms\n5. Länge: 100–150 Zeichen\n\nInput: {product_attributes}\nOutput: [Generierter Titel]',
+     scores:{info:'8.0',read:'8.5',comp:'8.8',search:'7.9'},
+     versions:[
+       {tag:'V2',cls:'current',date:'2024.06.05',desc:'Agent 建议：强制德语术语替代英语借词',result:'Judge 8.3 (+1.2) | CTR +5.1%'},
+       {tag:'V1',cls:'prev',date:'2024.05.12',desc:'Agent 从 US V3 迁移',result:'Judge 7.1'},
+     ]},
+    {cat:'家居',dot:'#10b981',preview:'German home. Bauhaus/Scandi. Metric. German material names (Eiche/Buche).',version:'V1',judgeScore:'7.4',date:'2024.06.10',
+     prompt:'Deutscher Wohndeko-Texter.\n1. Bauhaus, Skandinavisch, Landhaus\n2. Metric cm\n3. Eiche, Buche, Kiefer\n4. Wohnzimmer, Schlafzimmer\n5. 90–140 Zeichen\n\nInput: {product_attributes}\nOutput: [Generierter Titel]',
+     scores:{info:'7.5',read:'7.2',comp:'8.0',search:'6.9'},
+     versions:[{tag:'V1',cls:'current',date:'2024.06.10',desc:'Agent 从 US V3 迁移 + 德语材质映射',result:'Judge 7.4 | 待实验'}]},
+  ],
+  FR:[
+    {cat:'服饰',dot:'#818cf8',preview:'French fashion. Gendered adjectives. EU sizing (T.38). Saison: printemps/été.',version:'V2',judgeScore:'7.6',date:'2024.06.11',
+     prompt:'Rédacteur mode FR.\n1. Accord genre/nombre\n2. T.38, T.40\n3. printemps/été, automne/hiver\n4. 80–120 caractères\n\nInput: {product_attributes}\nOutput: [Titre]',
+     scores:{info:'7.5',read:'7.8',comp:'8.0',search:'7.1'},
+     versions:[
+       {tag:'V2',cls:'current',date:'2024.06.11',desc:'Agent 建议：增加形容词性别一致规则',result:'Judge 7.6 (+0.8) | CTR +3.6%'},
+       {tag:'V1',cls:'prev',date:'2024.05.18',desc:'Agent 从 US V4 迁移',result:'Judge 6.8'},
+     ]},
+    {cat:'工具',dot:'#f59e0b',preview:'French tools. NF/CE cert. French terms: perceuse, meuleuse. Metric 230V.',version:'V1',judgeScore:'7.2',date:'2024.06.02',
+     prompt:'Rédacteur technique FR.\n1. Métrique\n2. NF/CE\n3. perceuse, meuleuse, ponceuse\n4. 100–140 chars\n\nInput: {product_attributes}\nOutput: [Titre]',
+     scores:{info:'7.3',read:'7.0',comp:'7.8',search:'6.7'},
+     versions:[{tag:'V1',cls:'current',date:'2024.06.02',desc:'Agent 从 DE V2 迁移 + 法语术语映射',result:'Judge 7.2 | 待实验'}]},
+    {cat:'家居',dot:'#10b981',preview:'French home. Parisien/Haussmannien. French materials (chêne, hêtre, lin). Metric.',version:'V1',judgeScore:'7.3',date:'2024.06.14',
+     prompt:'Rédacteur déco FR.\n1. Parisien, Haussmannien, Scandinave\n2. chêne, hêtre, lin\n3. salon, chambre\n4. cm\n5. 90–130 chars\n\nInput: {product_attributes}\nOutput: [Titre]',
+     scores:{info:'7.4',read:'7.1',comp:'7.8',search:'6.9'},
+     versions:[{tag:'V1',cls:'current',date:'2024.06.14',desc:'Agent 从 US V3 迁移 + 法语风格词库',result:'Judge 7.3 | 待实验'}]},
+  ],
+  JP:[
+    {cat:'服饰',dot:'#818cf8',preview:'Japanese fashion. カタカナ素材. サイズ S/M/L+cm. 40〜60文字. 春夏/秋冬 season.',version:'V3',judgeScore:'8.4',date:'2024.06.16',
+     prompt:'日本ファッションECコピーライター。\n1. サイズ: S/M/L + cm\n2. カタカナ素材\n3. 春夏/秋冬\n4. 40〜60文字\n5. 禁止: 爆款/人気\n\nInput: {product_attributes}\nOutput: [タイトル]',
+     scores:{info:'8.3',read:'8.6',comp:'8.8',search:'7.9'},
+     versions:[
+       {tag:'V3',cls:'current',date:'2024.06.16',desc:'Agent 建议：文字数 80→60、カタカナ素材強制',result:'Judge 8.4 (+0.9) | CTR +6.1%'},
+       {tag:'V2',cls:'prev',date:'2024.05.30',desc:'Agent 建议：季節ワード必須化',result:'Judge 7.5 (+0.8)'},
+       {tag:'V1',cls:'prev',date:'2024.05.05',desc:'初始版本',result:'Judge 6.7'},
+     ]},
+    {cat:'工具',dot:'#f59e0b',preview:'Japanese tools. JIS規格. 100V. カタカナ technical terms. Metric.',version:'V1',judgeScore:'7.3',date:'2024.06.04',
+     prompt:'日本工具テクニカルライター。\n1. JIS規格\n2. 100V\n3. カタカナ用語\n4. 50〜80文字\n\nInput: {product_attributes}\nOutput: [タイトル]',
+     scores:{info:'7.4',read:'7.1',comp:'7.8',search:'6.9'},
+     versions:[{tag:'V1',cls:'current',date:'2024.06.04',desc:'Agent 从 US V3 迁移 + JIS适配',result:'Judge 7.3 | 待实验'}]},
+    {cat:'家居',dot:'#10b981',preview:'Japanese home. シンプル/ナチュラル/和モダン. Compact design emphasis. Metric cm.',version:'V2',judgeScore:'8.1',date:'2024.06.20',
+     prompt:'日本インテリアECコピーライター。\n1. シンプル/ナチュラル/和モダン/北欧\n2. コンパクト設計強調\n3. 天然木/竹/和紙\n4. cm\n5. 45〜70文字\n\nInput: {product_attributes}\nOutput: [タイトル]',
+     scores:{info:'8.0',read:'8.3',comp:'8.5',search:'7.6'},
+     versions:[
+       {tag:'V2',cls:'current',date:'2024.06.20',desc:'Agent 建议：增加コンパクト設計强调',result:'Judge 8.1 (+1.0) | CTR +4.5%'},
+       {tag:'V1',cls:'prev',date:'2024.05.22',desc:'Agent 从 US V3 迁移 + 日本风格词库',result:'Judge 7.1'},
+     ]},
+  ],
+  ES:[
+    {cat:'服饰',dot:'#818cf8',preview:'Spanish fashion. Gendered nouns. EU sizing. Temporada keywords.',version:'V1',judgeScore:'7.1',date:'2024.06.08',
+     prompt:'Redactor moda ES.\n1. Concordancia género\n2. T.38, T.40\n3. primavera/verano\n4. 80–120 chars\n\nInput: {product_attributes}\nOutput: [Título]',
+     scores:{info:'7.2',read:'7.0',comp:'7.5',search:'6.7'},
+     versions:[{tag:'V1',cls:'current',date:'2024.06.08',desc:'Agent 从 US V4 迁移 + 西语适配',result:'Judge 7.1 | 待实验'}]},
+    {cat:'工具',dot:'#f59e0b',preview:'Spanish tools. Metric 230V. taladro, amoladora, lijadora.',version:'V1',judgeScore:'7.0',date:'2024.06.01',
+     prompt:'Redactor técnico ES.\n1. Métrico\n2. 230V\n3. taladro, amoladora\n4. 100–140 chars\n\nInput: {product_attributes}\nOutput: [Título]',
+     scores:{info:'7.1',read:'6.8',comp:'7.5',search:'6.6'},
+     versions:[{tag:'V1',cls:'current',date:'2024.06.01',desc:'Agent 从 DE V2 迁移 + 西语术语映射',result:'Judge 7.0 | 待实验'}]},
+    {cat:'家居',dot:'#10b981',preview:'Spanish home. Mediterranean/rustic style. Metric. Spanish room names.',version:'V1',judgeScore:'7.2',date:'2024.06.12',
+     prompt:'Redactor decoración ES.\n1. mediterráneo, rústico, moderno\n2. Métrico cm\n3. salón, dormitorio\n4. 90–130 chars\n\nInput: {product_attributes}\nOutput: [Título]',
+     scores:{info:'7.3',read:'7.0',comp:'7.6',search:'6.9'},
+     versions:[{tag:'V1',cls:'current',date:'2024.06.12',desc:'Agent 从 US V3 迁移 + 西语风格词库',result:'Judge 7.2 | 待实验'}]},
+  ]
+};
+
+function renderGrid(ctry){
+  const grid=document.getElementById('promptGrid');grid.innerHTML='';
+  const items=promptData[ctry]||[];
+  items.forEach((item,i)=>{
+    const card=document.createElement('div');card.className='prompt-card';
+    card.innerHTML=`<div class="cat"><span class="dot" style="background:${item.dot}"></span>${item.cat}</div><div class="preview">${item.preview}</div><div class="meta-row"><span class="version">${item.version}</span><span class="judge-score">Judge ${item.judgeScore}</span><span style="color:#94a3b8">${item.date}</span></div>`;
+    card.onclick=()=>openDetail(ctry,i);grid.appendChild(card);
+  });
+}
+document.querySelectorAll('.country-chip').forEach(c=>{c.addEventListener('click',()=>{document.querySelectorAll('.country-chip').forEach(x=>x.classList.remove('active'));c.classList.add('active');renderGrid(c.dataset.ctry)})});
+renderGrid('US');
+
+function openDetail(ctry,i){
+  const item=promptData[ctry][i];
+  const ctryName={US:'美国',UK:'英国',DE:'德国',FR:'法国',JP:'日本',ES:'西班牙'}[ctry];
+  document.getElementById('dpTitle').textContent=`${ctryName} · ${item.cat} Prompt`;
+  document.getElementById('dpMeta').textContent=`版本 ${item.version} | 最近更新 ${item.date} | Judge 评分 ${item.judgeScore}`;
+  document.getElementById('dpPrompt').textContent=item.prompt;
+  const scoresEl=document.getElementById('dpScores');scoresEl.innerHTML='';
+  const dims=[{name:'信息完整性',key:'info',color:'#2563eb',bg:'#dbeafe'},{name:'可读性',key:'read',color:'#16a34a',bg:'#dcfce7'},{name:'合规性',key:'comp',color:'#d97706',bg:'#fef3c7'},{name:'搜索友好度',key:'search',color:'#7c3aed',bg:'#f3e8ff'}];
+  dims.forEach(d=>{const v=item.scores[d.key];scoresEl.innerHTML+=`<div style="background:${d.bg};border-radius:10px;padding:14px;text-align:center"><div style="font-size:10px;font-weight:600;color:${d.color};text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px">${d.name}</div><div style="font-size:24px;font-weight:700">${v}</div></div>`});
+  const vList=document.getElementById('dpVersions');vList.innerHTML='';
+  item.versions.forEach(v=>{const li=document.createElement('li');li.className='version-item';li.innerHTML=`<span class="v-tag ${v.cls}">${v.tag}</span><div><div class="v-date">${v.date}</div><div class="v-desc">${v.desc}</div><div class="v-result">${v.result}</div></div>`;vList.appendChild(li)});
+  document.getElementById('overlay').style.display='block';document.getElementById('detailPanel').classList.add('open');
+}
+function closeDetail(){document.getElementById('overlay').style.display='none';document.getElementById('detailPanel').classList.remove('open')}
+</script>
+</body>
+</html>

@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>翻译平台 — AIGC商品优化平台</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f5f6fa;color:#1a1a2e;line-height:1.6}
+.top-nav{background:#fff;border-bottom:1px solid #e2e4e9;display:flex;align-items:center;padding:0 32px;height:56px;position:sticky;top:0;z-index:100}
+.top-nav .brand{font-size:15px;font-weight:700;color:#4f46e5;margin-right:40px;letter-spacing:-.3px}
+.top-nav a{text-decoration:none;color:#64748b;font-size:14px;font-weight:500;padding:16px 16px;border-bottom:2px solid transparent;transition:.2s}
+.top-nav a:hover{color:#4f46e5}.top-nav a.active{color:#4f46e5;border-bottom-color:#4f46e5}
+.agent-bar{background:linear-gradient(90deg,#4f46e5,#6366f1);padding:10px 32px;display:flex;align-items:center;gap:12px;overflow-x:auto}
+.agent-bar .ab-label{color:rgba(255,255,255,.7);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap}
+.agent-bar .ab-step{display:flex;align-items:center;gap:6px;padding:5px 14px;border-radius:16px;font-size:12px;font-weight:600;white-space:nowrap;cursor:pointer;transition:.2s}
+.agent-bar .ab-step.current{background:rgba(255,255,255,.2);color:#fff}
+.agent-bar .ab-step.done{background:rgba(255,255,255,.1);color:rgba(255,255,255,.6)}
+.agent-bar .ab-step.next{background:transparent;color:rgba(255,255,255,.35);border:1px dashed rgba(255,255,255,.25)}
+.agent-bar .ab-arrow{color:rgba(255,255,255,.3);font-size:14px}
+.page{max-width:1240px;margin:0 auto;padding:24px 32px 60px}
+.page-title{font-size:22px;font-weight:700;margin-bottom:4px}
+.page-sub{font-size:13px;color:#94a3b8;margin-bottom:24px}
+.section-title{font-size:16px;font-weight:700;margin-bottom:4px;margin-top:36px;display:flex;align-items:center;gap:8px}
+.section-title .badge-agent{font-size:10px;font-weight:700;background:#eef2ff;color:#4f46e5;padding:3px 10px;border-radius:10px;text-transform:uppercase;letter-spacing:.4px}
+.section-sub{font-size:13px;color:#94a3b8;margin-bottom:18px}
+.card{background:#fff;border-radius:12px;border:1px solid #e8eaef;padding:24px;margin-bottom:20px}
+.card h3{font-size:15px;font-weight:600;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.card h3 .icon{width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px}
+/* TABS */
+.mode-tabs{display:flex;gap:0;margin-bottom:24px;border-bottom:2px solid #e2e4e9}
+.mode-tab{padding:12px 24px;font-size:14px;font-weight:600;color:#94a3b8;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;transition:.2s;user-select:none}
+.mode-tab:hover{color:#4f46e5}.mode-tab.active{color:#4f46e5;border-bottom-color:#4f46e5}
+.tab-content{display:none}.tab-content.active{display:block}
+/* FLOW */
+.flow{display:flex;align-items:center;gap:0;overflow-x:auto;padding:8px 0}
+.flow-step{background:#f8f9fc;border:1px solid #e2e4e9;border-radius:10px;padding:14px 16px;font-size:13px;font-weight:500;text-align:center;min-width:120px;flex-shrink:0}
+.flow-step .step-label{font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;font-weight:600}
+.flow-step.highlight{background:#eef2ff;border-color:#c7d2fe;color:#4338ca}
+.flow-arrow{color:#cbd5e1;font-size:18px;padding:0 5px;flex-shrink:0}
+/* RULES TABLE */
+.rule-tbl{width:100%;border-collapse:collapse}
+.rule-tbl th{text-align:left;font-size:11px;color:#94a3b8;font-weight:600;text-transform:uppercase;letter-spacing:.5px;padding:8px 12px;border-bottom:1px solid #e8eaef}
+.rule-tbl td{padding:10px 12px;font-size:13px;border-bottom:1px solid #f1f3f7}
+.rule-tbl tr:last-child td{border-bottom:none}
+.rule-tbl .arrow-cell{color:#4f46e5;font-weight:700;text-align:center;width:40px}
+.rule-tbl code{background:#f0fdf4;padding:2px 8px;border-radius:4px;font-size:12px;color:#166534}
+.rule-tbl code.to{background:#eef2ff;color:#4338ca}
+.rule-tbl .source-tag{font-size:10px;font-weight:600;padding:2px 8px;border-radius:8px}
+.rule-tbl .source-tag.auto{background:#fef3c7;color:#d97706}
+.rule-tbl .source-tag.manual{background:#f1f3f7;color:#64748b}
+/* COMPARE */
+.compare-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px}
+.compare-box{border-radius:10px;padding:18px 20px}
+.compare-box.before{background:#fef2f2;border:1px solid #fecaca}
+.compare-box.after{background:#f0fdf4;border:1px solid #bbf7d0}
+.compare-box .tag{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
+.compare-box.before .tag{color:#dc2626}.compare-box.after .tag{color:#16a34a}
+.compare-box .title-text{font-size:14px;line-height:1.7}
+.compare-box .score{margin-top:10px;font-size:12px;font-weight:600;color:#64748b}
+/* SMART ROUTING */
+.router-flow{display:flex;align-items:center;gap:0;justify-content:center;flex-wrap:wrap;padding:12px 0}
+.router-node{border-radius:12px;padding:14px 20px;text-align:center;font-size:13px;font-weight:500;min-width:110px}
+.router-node.input{background:#f8f9fc;border:1px solid #e2e4e9}
+.router-node.decision{background:#fef3c7;border:1px solid #fcd34d;transform:rotate(0deg);clip-path:polygon(50% 0%,100% 50%,50% 100%,0% 50%);padding:30px 36px;font-size:11px;font-weight:700}
+.router-node.pre{background:#dbeafe;border:1px solid #93c5fd}
+.router-node.post{background:#f3e8ff;border:1px solid #c4b5fd}
+.router-node.output{background:#dcfce7;border:1px solid #86efac}
+.router-arrow{color:#cbd5e1;font-size:16px;padding:0 6px}
+.router-branch{display:flex;flex-direction:column;gap:12px;align-items:center}
+/* AGENT SUGGEST */
+.agent-suggest{background:linear-gradient(135deg,#eef2ff,#fefce8);border:1px solid #c7d2fe;border-radius:12px;padding:20px 24px;margin-bottom:20px}
+.agent-suggest .as-header{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.agent-suggest .as-header .as-dot{width:8px;height:8px;border-radius:50%;background:#22c55e;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.agent-suggest .as-header span{font-size:12px;font-weight:700;color:#4f46e5;text-transform:uppercase;letter-spacing:.4px}
+.agent-suggest .as-item{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid rgba(99,102,241,.1);font-size:13px}
+.agent-suggest .as-item:last-child{border-bottom:none}
+.agent-suggest .as-num{width:22px;height:22px;border-radius:50%;background:#f59e0b;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.agent-suggest .as-action{font-size:11px;color:#4f46e5;font-weight:600;cursor:pointer;margin-top:4px}
+/* HEATMAP */
+.heatmap-wrap{overflow-x:auto}
+.heatmap{border-collapse:collapse;min-width:100%}
+.heatmap th{font-size:11px;color:#94a3b8;font-weight:600;padding:8px 10px;text-align:center}
+.heatmap td{padding:0;text-align:center;position:relative}
+.heatmap .cell{width:100%;height:40px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;border-radius:4px;margin:2px}
+/* FUNNEL */
+.funnel{display:flex;gap:12px;align-items:stretch}
+.funnel-step{flex:1;background:#fff;border:1px solid #e8eaef;border-radius:12px;padding:18px;text-align:center}
+.funnel-step .f-icon{font-size:22px;margin-bottom:6px}
+.funnel-step .f-label{font-size:11px;color:#94a3b8;font-weight:600;text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px}
+.funnel-step .f-value{font-size:24px;font-weight:700}
+.funnel-step .f-desc{font-size:12px;color:#64748b;margin-top:4px}
+.funnel-arrow{display:flex;align-items:center;color:#cbd5e1;font-size:20px;flex-shrink:0}
+@media(max-width:768px){.compare-row{grid-template-columns:1fr}.funnel{flex-direction:column}.funnel-arrow{justify-content:center;transform:rotate(90deg)}}
+</style>
+</head>
+<body>
+
+<nav class="top-nav">
+  <span class="brand">AIGC 商品优化</span>
+  <a href="experiment-platform.html">实验平台</a>
+  <a href="translation-platform.html" class="active">翻译平台</a>
+  <a href="ai-title-strategy.html">AI 标题策略库</a>
+</nav>
+
+<div class="agent-bar">
+  <span class="ab-label">Agent Pipeline</span>
+  <a href="ai-title-strategy.html" class="ab-step done" style="text-decoration:none">策略生成</a>
+  <span class="ab-arrow">→</span>
+  <span class="ab-step current">翻译适配</span>
+  <span class="ab-arrow">→</span>
+  <a href="experiment-platform.html" class="ab-step next" style="text-decoration:none">实验验证</a>
+  <span class="ab-arrow">→</span>
+  <a href="ai-title-strategy.html" class="ab-step next" style="text-decoration:none">效果回流</a>
+</div>
+
+<div class="page">
+  <h1 class="page-title">翻译优化平台</h1>
+  <p class="page-sub">智能翻译替换策略管理，Agent 自动发现规则、智能路由、动态校准质检阈值</p>
+
+  <!-- AGENT: RULE DISCOVERY -->
+  <div class="agent-suggest">
+    <div class="as-header"><div class="as-dot"></div><span>Agent 规则自发现</span></div>
+    <div class="as-item"><span class="as-num">1</span><div>挖掘发现：近 7 天有 <strong>1,842 条</strong>翻译被人工修改，其中 <strong>37%</strong> 集中在尺码格式错误（如"均码"被译为"uniform code"而非"One Size"）。Agent 已自动生成 3 条候选规则。<div class="as-action">审核候选规则 →</div></div></div>
+    <div class="as-item"><span class="as-num">2</span><div>日语市场翻译质量异常下降（本周通过率 62% vs 上周 71%），主要问题集中在敬语混用（です/だ 体不统一）。Agent 建议新增"日语敬语体统一"后处理规则。<div class="as-action">查看样本 & 确认 →</div></div></div>
+    <div class="as-item"><span class="as-num">3</span><div>德语工具类目"Einheitsgröße"（均码）已有现成替换规则，但法语市场缺少对应规则。Agent 从聚类分析中发现 "taille unique" 的错误翻译高频出现（892 次/周）。<div class="as-action">从 DE 规则迁移到 FR →</div></div></div>
+  </div>
+
+  <!-- MODE TABS -->
+  <div class="mode-tabs">
+    <div class="mode-tab active" data-tab="pre">翻译前替换</div>
+    <div class="mode-tab" data-tab="post">翻译后替换</div>
+    <div class="mode-tab" data-tab="router">智能路由 (Agent)</div>
+  </div>
+
+  <!-- TAB A: PRE-TRANSLATE -->
+  <div class="tab-content active" id="tab-pre">
+    <div class="card">
+      <h3><span class="icon" style="background:#eef2ff;color:#4f46e5">⟳</span> 工作流程</h3>
+      <div class="flow">
+        <div class="flow-step"><div class="step-label">Step 1</div>原始标题</div><div class="flow-arrow">→</div>
+        <div class="flow-step highlight"><div class="step-label">Step 2</div>规则匹配替换<br><small style="color:#6366f1">移除翻译噪声</small></div><div class="flow-arrow">→</div>
+        <div class="flow-step"><div class="step-label">Step 3</div>翻译引擎</div><div class="flow-arrow">→</div>
+        <div class="flow-step"><div class="step-label">Step 4</div>目标语言</div>
+      </div>
+    </div>
+    <div class="card">
+      <h3><span class="icon" style="background:#fef3c7;color:#d97706">⚙</span> 替换规则 <span style="font-size:11px;color:#94a3b8;font-weight:400;margin-left:auto">来源标记：🟡 Agent 挖掘 / ⚪ 人工配置</span></h3>
+      <table class="rule-tbl">
+        <thead><tr><th>#</th><th>原文关键词</th><th></th><th>替换为</th><th>语言</th><th>命中</th><th>来源</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td><code>【爆款】</code></td><td class="arrow-cell">→</td><td><code class="to">删除</code></td><td>全部</td><td>128,340</td><td><span class="source-tag manual">人工</span></td></tr>
+          <tr><td>2</td><td><code>新款 / 热卖</code></td><td class="arrow-cell">→</td><td><code class="to">删除</code></td><td>全部</td><td>94,217</td><td><span class="source-tag manual">人工</span></td></tr>
+          <tr><td>3</td><td><code>多功能</code></td><td class="arrow-cell">→</td><td><code class="to">versatile</code></td><td>EN/DE/FR</td><td>67,832</td><td><span class="source-tag manual">人工</span></td></tr>
+          <tr style="background:#fffbeb"><td>4</td><td><code>均码</code></td><td class="arrow-cell">→</td><td><code class="to">One Size</code></td><td>EN/ES</td><td>38,945</td><td><span class="source-tag auto">Agent</span></td></tr>
+          <tr style="background:#fffbeb"><td>5</td><td><code>厂家直供</code></td><td class="arrow-cell">→</td><td><code class="to">删除</code></td><td>全部</td><td>12,440</td><td><span class="source-tag auto">Agent</span></td></tr>
+          <tr style="background:#fffbeb"><td>6</td><td><code>支持定制</code></td><td class="arrow-cell">→</td><td><code class="to">Customizable</code></td><td>EN</td><td>8,720</td><td><span class="source-tag auto">Agent</span></td></tr>
+          <tr><td>7</td><td><code>/(\d+\.?\d*)寸/</code></td><td class="arrow-cell">→</td><td><code class="to">$1 inch</code></td><td>EN/DE</td><td>22,887</td><td><span class="source-tag manual">人工</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="card">
+      <h3><span class="icon" style="background:#dcfce7;color:#16a34a">⬡</span> 效果对比</h3>
+      <div class="compare-row">
+        <div class="compare-box before"><div class="tag">替换前</div><div class="title-text">【爆款】新款多功能韩版连衣裙 均码可选 3.5寸腰带</div><div class="score">质量分：<strong style="color:#dc2626">42</strong></div></div>
+        <div class="compare-box after"><div class="tag">替换后</div><div class="title-text">Versatile Korean Style Dress One Size 3.5 inch Belt</div><div class="score">质量分：<strong style="color:#16a34a">87</strong></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB B: POST-TRANSLATE -->
+  <div class="tab-content" id="tab-post">
+    <div class="card">
+      <h3><span class="icon" style="background:#eef2ff;color:#4f46e5">⟳</span> 工作流程</h3>
+      <div class="flow">
+        <div class="flow-step"><div class="step-label">Step 1</div>原始标题</div><div class="flow-arrow">→</div>
+        <div class="flow-step"><div class="step-label">Step 2</div>翻译引擎</div><div class="flow-arrow">→</div>
+        <div class="flow-step"><div class="step-label">Step 3</div>AI 质量筛选</div><div class="flow-arrow">→</div>
+        <div class="flow-step highlight"><div class="step-label">Step 4</div>规则匹配替换</div><div class="flow-arrow">→</div>
+        <div class="flow-step"><div class="step-label">Step 5</div>最终文案</div>
+      </div>
+    </div>
+    <div class="card">
+      <h3><span class="icon" style="background:#fef3c7;color:#d97706">⚙</span> 替换规则</h3>
+      <table class="rule-tbl">
+        <thead><tr><th>#</th><th>翻译结果关键词</th><th></th><th>替换为</th><th>语言</th><th>命中</th><th>来源</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td><code>explosive model</code></td><td class="arrow-cell">→</td><td><code class="to">删除</code></td><td>EN</td><td>86,420</td><td><span class="source-tag manual">人工</span></td></tr>
+          <tr><td>2</td><td><code>hot selling</code></td><td class="arrow-cell">→</td><td><code class="to">删除</code></td><td>EN</td><td>72,315</td><td><span class="source-tag manual">人工</span></td></tr>
+          <tr style="background:#fffbeb"><td>3</td><td><code>uniform code</code></td><td class="arrow-cell">→</td><td><code class="to">One Size</code></td><td>EN</td><td>4,280</td><td><span class="source-tag auto">Agent</span></td></tr>
+          <tr><td>4</td><td><code>free size</code></td><td class="arrow-cell">→</td><td><code class="to">One Size</code></td><td>EN</td><td>29,770</td><td><span class="source-tag manual">人工</span></td></tr>
+          <tr style="background:#fffbeb"><td>5</td><td><code>taille uniforme</code></td><td class="arrow-cell">→</td><td><code class="to">Taille unique</code></td><td>FR</td><td>892</td><td><span class="source-tag auto">Agent</span></td></tr>
+          <tr><td>6</td><td><code>new style</code></td><td class="arrow-cell">→</td><td><code class="to">删除</code></td><td>EN</td><td>58,100</td><td><span class="source-tag manual">人工</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="card">
+      <h3><span class="icon" style="background:#dcfce7;color:#16a34a">⬡</span> 效果对比</h3>
+      <div class="compare-row">
+        <div class="compare-box before"><div class="tag">替换前</div><div class="title-text">Explosive Model New Style Versatile Korean Style Dress Uniform Code 8.89cm Belt</div><div class="score">质量分：<strong style="color:#dc2626">51</strong></div></div>
+        <div class="compare-box after"><div class="tag">替换后</div><div class="title-text">Versatile Korean Style Dress One Size 3.5 inch Belt</div><div class="score">质量分：<strong style="color:#16a34a">85</strong></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB C: SMART ROUTER -->
+  <div class="tab-content" id="tab-router">
+    <div class="card">
+      <h3><span class="icon" style="background:#fef3c7;color:#d97706">🧠</span> 智能路由决策逻辑</h3>
+      <p style="font-size:13px;color:#64748b;margin-bottom:20px;line-height:1.7">Agent 根据词汇特征自动判断走"翻译前替换"还是"翻译后替换"，无需人工分类。核心原则：结构化噪声（营销词/格式）翻译前清除，语境依赖问题（歧义/文化适配）翻译后修正。</p>
+      <div class="router-flow">
+        <div class="router-node input"><strong>原始标题</strong><br><small style="color:#94a3b8">词级分析</small></div>
+        <div class="router-arrow">→</div>
+        <div class="router-node decision">词类<br>判定</div>
+        <div class="router-arrow">→</div>
+        <div class="router-branch">
+          <div style="display:flex;align-items:center;gap:8px">
+            <small style="color:#2563eb;font-weight:600;font-size:11px">营销词/格式词/单位</small>
+            <div class="router-arrow">→</div>
+            <div class="router-node pre"><strong>翻译前替换</strong><br><small style="color:#2563eb">清除后再翻译</small></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <small style="color:#7c3aed;font-weight:600;font-size:11px">语境词/文化词/歧义</small>
+            <div class="router-arrow">→</div>
+            <div class="router-node post"><strong>翻译后替换</strong><br><small style="color:#7c3aed">翻译后按语境修正</small></div>
+          </div>
+        </div>
+        <div class="router-arrow">→</div>
+        <div class="router-node output"><strong>合并输出</strong><br><small style="color:#16a34a">最终目标语言</small></div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>路由分类器训练数据</h3>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div style="background:#f8f9fc;border-radius:10px;padding:16px">
+          <div style="font-size:12px;font-weight:600;color:#2563eb;margin-bottom:8px">→ 翻译前替换（68% 的规则）</div>
+          <div style="font-size:13px;color:#475569;line-height:1.8">营销修饰词（爆款/热卖/新款）<br>尺码格式词（均码/XXL码）<br>单位标记（寸/cm→inch）<br>供应商话术（厂家直供/支持定制）<br>重复冗余词（高品质/优质/精选）</div>
+        </div>
+        <div style="background:#f8f9fc;border-radius:10px;padding:16px">
+          <div style="font-size:12px;font-weight:600;color:#7c3aed;margin-bottom:8px">→ 翻译后替换（32% 的规则）</div>
+          <div style="font-size:13px;color:#475569;line-height:1.8">文化适配词（韩版→Korean style）<br>语境歧义词（多功能需看品类选择 versatile/multifunctional）<br>品牌名音译校正<br>敬语/语体统一（日语です/だ体）<br>合规敏感词（各国化妆品宣称）</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DYNAMIC THRESHOLD -->
+  <h2 class="section-title">动态质检阈值校准 <span class="badge-agent">Agent</span></h2>
+  <p class="section-sub">按语种 × 品类自动校准 AI 质检置信度阈值，替代固定 0.75 一刀切</p>
+
+  <div class="card">
+    <div class="heatmap-wrap">
+      <table class="heatmap" id="heatmapTable"></table>
+    </div>
+    <div style="display:flex;gap:16px;margin-top:14px;align-items:center;font-size:11px;color:#94a3b8">
+      <span>阈值色标：</span>
+      <span style="display:flex;align-items:center;gap:4px"><span style="width:16px;height:12px;border-radius:3px;background:#dcfce7;display:inline-block"></span> 宽松（&gt;0.65）高翻译难度</span>
+      <span style="display:flex;align-items:center;gap:4px"><span style="width:16px;height:12px;border-radius:3px;background:#fef3c7;display:inline-block"></span> 标准（0.70-0.80）</span>
+      <span style="display:flex;align-items:center;gap:4px"><span style="width:16px;height:12px;border-radius:3px;background:#dbeafe;display:inline-block"></span> 严格（&gt;0.80）低翻译难度</span>
+    </div>
+  </div>
+
+  <!-- QA PIPELINE -->
+  <h2 class="section-title" style="margin-top:36px">AI 质检 + 人工复核流水线</h2>
+  <p class="section-sub">动态阈值校准后，复核队列更加精准，人力效率提升 40%</p>
+
+  <div class="funnel">
+    <div class="funnel-step"><div class="f-icon">🤖</div><div class="f-label">AI 质检</div><div class="f-value">100%</div><div class="f-desc">动态阈值：语种×品类自适应</div></div>
+    <div class="funnel-arrow">→</div>
+    <div class="funnel-step"><div class="f-icon">📋</div><div class="f-label">推入复核</div><div class="f-value">18%</div><div class="f-desc">↓5pp vs 固定阈值（原23%）</div></div>
+    <div class="funnel-arrow">→</div>
+    <div class="funnel-step"><div class="f-icon">👤</div><div class="f-label">人工复核</div><div class="f-value">91%</div><div class="f-desc">复核命中率↑（更少无效复核）</div></div>
+    <div class="funnel-arrow">→</div>
+    <div class="funnel-step"><div class="f-icon">✅</div><div class="f-label">上线</div><div class="f-value">99.1%</div><div class="f-desc">最终质量达标率</div></div>
+  </div>
+
+  <div class="card" style="margin-top:20px">
+    <h3><span class="icon" style="background:#eef2ff;color:#4f46e5">📊</span> 各语种质检通过率（动态阈值 vs 固定阈值）</h3>
+    <div style="height:260px"><canvas id="qaChart"></canvas></div>
+  </div>
+</div>
+
+<script>
+/* TAB */
+document.querySelectorAll('.mode-tab').forEach(t=>{t.addEventListener('click',()=>{document.querySelectorAll('.mode-tab').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));t.classList.add('active');document.getElementById('tab-'+t.dataset.tab).classList.add('active')})});
+
+/* HEATMAP */
+const langs=['English','Deutsch','Français','Español','Italiano','日本語','한국어','Português','العربية','ภาษาไทย'];
+const cats=['服饰','工具','家居','美妆','3C','宠物'];
+const thresholds=[
+  [.82,.78,.80,.75,.85,.70],[.76,.72,.74,.70,.78,.68],[.73,.70,.72,.68,.75,.66],[.75,.72,.74,.69,.77,.67],
+  [.72,.68,.70,.66,.74,.65],[.68,.64,.66,.62,.70,.60],[.66,.62,.64,.60,.68,.58],[.74,.70,.72,.68,.76,.66],
+  [.64,.60,.62,.58,.66,.56],[.65,.62,.63,.59,.67,.57]
+];
+const ht=document.getElementById('heatmapTable');
+let hdr='<tr><th></th>';cats.forEach(c=>hdr+=`<th>${c}</th>`);hdr+='</tr>';
+let body='';
+langs.forEach((l,li)=>{body+=`<tr><th style="text-align:left;padding-right:16px">${l}</th>`;cats.forEach((c,ci)=>{const v=thresholds[li][ci];const bg=v>.80?'#dbeafe':v>.70?'#fef3c7':v>.60?'#dcfce7':'#fee2e2';const tc=v>.80?'#2563eb':v>.70?'#d97706':'#16a34a';body+=`<td><div class="cell" style="background:${bg};color:${tc}">${v.toFixed(2)}</div></td>`});body+='</tr>'});
+ht.innerHTML=hdr+body;
+
+/* QA CHART */
+new Chart(document.getElementById('qaChart'),{type:'bar',data:{labels:langs,datasets:[{label:'动态阈值 — 免复核率',data:[85,78,75,80,76,70,68,79,66,69],backgroundColor:'#818cf8',borderRadius:4},{label:'固定阈值 0.75 — 免复核率',data:[82,74,71,77,73,68,65,76,62,66],backgroundColor:'#e2e4e9',borderRadius:4},{label:'人工复核后通过率',data:[99,98,98,98,98,97,97,98,97,97],backgroundColor:'#34d399',borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top',labels:{font:{size:11}}}},scales:{y:{beginAtZero:true,max:100,ticks:{callback:v=>v+'%'},grid:{color:'#f1f3f7'}},x:{grid:{display:false}}}}});
+</script>
+</body>
+</html>

@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>付款管理 — 仓间调拨结算</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f5f6fa;color:#1a1a2e;line-height:1.6}
+.top-nav{background:#fff;border-bottom:1px solid #e2e4e9;display:flex;align-items:center;padding:0 32px;height:56px;position:sticky;top:0;z-index:100}
+.top-nav .brand{font-size:15px;font-weight:700;color:#0f766e;margin-right:40px}
+.top-nav a{text-decoration:none;color:#64748b;font-size:14px;font-weight:500;padding:16px 14px;border-bottom:2px solid transparent;transition:.2s}
+.top-nav a:hover{color:#0f766e}.top-nav a.active{color:#0f766e;border-bottom-color:#0f766e}
+.flow-bar{background:linear-gradient(90deg,#0f766e,#14b8a6);padding:12px 32px;display:flex;align-items:center;gap:0;overflow-x:auto}
+.flow-step{display:flex;align-items:center;padding:6px 18px;font-size:13px;font-weight:600;white-space:nowrap;text-decoration:none}
+.flow-step.current{background:rgba(255,255,255,.2);color:#fff;border-radius:16px}
+.flow-step.done{color:rgba(255,255,255,.55)}
+.flow-step.next{color:rgba(255,255,255,.35)}
+.flow-arrow{color:rgba(255,255,255,.3);font-size:16px;padding:0 6px}
+.page{max-width:1240px;margin:0 auto;padding:24px 32px 60px}
+.page-title{font-size:22px;font-weight:700;margin-bottom:4px}
+.page-sub{font-size:13px;color:#94a3b8;margin-bottom:24px}
+.section-title{font-size:16px;font-weight:700;margin-bottom:4px;margin-top:32px}
+.section-sub{font-size:13px;color:#94a3b8;margin-bottom:18px}
+.card{background:#fff;border-radius:12px;border:1px solid #e8eaef;padding:24px;margin-bottom:20px}
+.card h3{font-size:15px;font-weight:600;margin-bottom:14px}
+/* KPI */
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:28px}
+.kpi-card{background:#fff;border-radius:12px;padding:18px 22px;border:1px solid #e8eaef}
+.kpi-card .label{font-size:11px;color:#94a3b8;font-weight:600;text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px}
+.kpi-card .value{font-size:26px;font-weight:700}
+.kpi-card .delta{font-size:12px;margin-top:2px;color:#64748b}
+/* PAYMENT FLOW */
+.pay-flow{display:flex;align-items:center;justify-content:center;gap:0;padding:12px 0}
+.pf-step{background:#f8f9fc;border:1px solid #e2e4e9;border-radius:10px;padding:16px 20px;text-align:center;min-width:140px}
+.pf-step .pf-num{width:28px;height:28px;border-radius:50%;background:#0f766e;color:#fff;font-size:12px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;margin-bottom:6px}
+.pf-step .pf-title{font-size:13px;font-weight:600}
+.pf-step .pf-desc{font-size:11px;color:#94a3b8;margin-top:2px}
+.pf-step.done{background:#dcfce7;border-color:#86efac}
+.pf-step.done .pf-num{background:#16a34a}
+.pf-step.current{background:#eef2ff;border-color:#a5b4fc}
+.pf-step.current .pf-num{background:#4f46e5}
+.pf-arrow{color:#cbd5e1;font-size:18px;padding:0 8px}
+/* TYPE FILTER */
+.type-bar{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.type-chip{padding:8px 18px;border-radius:20px;font-size:13px;font-weight:500;border:1px solid #e2e4e9;background:#fff;cursor:pointer;transition:.2s;user-select:none}
+.type-chip:hover{border-color:#0f766e;color:#0f766e}
+.type-chip.active{background:#0f766e;color:#fff;border-color:#0f766e}
+/* TABLE */
+.table-wrap{background:#fff;border-radius:12px;border:1px solid #e8eaef;overflow:hidden;margin-bottom:20px}
+.table-header{padding:16px 24px;border-bottom:1px solid #e8eaef;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px}
+.table-header h3{font-size:15px;font-weight:600}
+table{width:100%;border-collapse:collapse}
+thead th{text-align:left;font-size:11px;color:#94a3b8;font-weight:600;text-transform:uppercase;letter-spacing:.5px;padding:10px 14px;border-bottom:1px solid #e8eaef}
+tbody td{padding:12px 14px;font-size:13px;border-bottom:1px solid #f1f3f7}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover{background:#f8f9fc;cursor:pointer}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600}
+.badge.pending{background:#fef3c7;color:#d97706}
+.badge.processing{background:#dbeafe;color:#2563eb}
+.badge.completed{background:#dcfce7;color:#16a34a}
+.badge.closed{background:#f1f3f7;color:#94a3b8}
+.badge.forward{background:#dcfce7;color:#16a34a}
+.badge.reverse{background:#fee2e2;color:#dc2626}
+.badge.subsidy{background:#eef2ff;color:#4338ca}
+.btn{padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:.2s}
+.btn-primary{background:#0f766e;color:#fff}.btn-primary:hover{background:#0d6357}
+.btn-outline{background:transparent;border:1px solid #e2e4e9;color:#64748b}.btn-outline:hover{border-color:#0f766e;color:#0f766e}
+/* DETAIL PANEL */
+.detail-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.25);z-index:200}
+.detail-panel{position:fixed;top:0;right:0;width:600px;height:100vh;background:#fff;z-index:201;overflow-y:auto;padding:32px;box-shadow:-4px 0 24px rgba(0,0,0,.08);transform:translateX(100%);transition:transform .3s ease}
+.detail-panel.open{transform:translateX(0)}
+.detail-panel .close-btn{position:absolute;top:16px;right:16px;width:32px;height:32px;border:none;background:#f1f3f7;border-radius:8px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center}
+.detail-panel h3{font-size:18px;font-weight:700;margin-bottom:4px}
+.detail-panel .dp-meta{font-size:12px;color:#94a3b8;margin-bottom:20px}
+.detail-section{margin-bottom:24px}
+.detail-section h4{font-size:12px;font-weight:600;color:#64748b;margin-bottom:10px;text-transform:uppercase;letter-spacing:.4px}
+.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.info-item{font-size:13px}
+.info-item .ii-label{font-size:11px;color:#94a3b8;font-weight:600;text-transform:uppercase;letter-spacing:.3px}
+.info-item .ii-value{font-weight:600}
+.progress-bar{display:flex;height:8px;border-radius:4px;overflow:hidden;background:#e2e4e9;margin-bottom:8px}
+.progress-fill{height:100%;border-radius:4px}
+.progress-fill.done{background:#22c55e}
+.progress-fill.current{background:#0f766e}
+@media(max-width:768px){.kpi-row{grid-template-columns:repeat(2,1fr)}.detail-panel{width:100%}.pay-flow{flex-direction:column}.pf-arrow{transform:rotate(90deg)}}
+</style>
+</head>
+<body>
+
+<nav class="top-nav">
+  <span class="brand">仓间调拨结算</span>
+  <a href="billing-rules.html">计费规则</a>
+  <a href="reconciliation.html">对账管理</a>
+  <a href="bill-management.html">账单管理</a>
+  <a href="payment-management.html" class="active">付款管理</a>
+</nav>
+
+<div class="flow-bar">
+  <a href="billing-rules.html" class="flow-step done">1. 配规则</a><span class="flow-arrow">→</span>
+  <a href="reconciliation.html" class="flow-step done">2. 对账</a><span class="flow-arrow">→</span>
+  <a href="bill-management.html" class="flow-step done">3. 出账单</a><span class="flow-arrow">→</span>
+  <span class="flow-step current">4. 付款</span>
+</div>
+
+<div class="page">
+  <h1 class="page-title">付款管理</h1>
+  <p class="page-sub">审批通过的账单进入付款流程，商务核对金额、确认发票后发起 OA 支付审批</p>
+
+  <!-- KPI -->
+  <div class="kpi-row">
+    <div class="kpi-card"><div class="label">待付款账单</div><div class="value" style="color:#d97706">8</div><div class="delta">总金额 ¥2,148,200</div></div>
+    <div class="kpi-card"><div class="label">付款中</div><div class="value" style="color:#2563eb">5</div><div class="delta">OA 审批进行中</div></div>
+    <div class="kpi-card"><div class="label">本月已完成</div><div class="value" style="color:#16a34a">14</div><div class="delta">¥2,847,600 已付</div></div>
+    <div class="kpi-card"><div class="label">历史已关闭</div><div class="value" style="color:#94a3b8">3</div><div class="delta">支付关闭审批完成</div></div>
+  </div>
+
+  <!-- PAYMENT FLOW -->
+  <div class="card">
+    <h3>付款流程</h3>
+    <div class="pay-flow">
+      <div class="pf-step done"><div class="pf-num">1</div><div class="pf-title">账单审批通过</div><div class="pf-desc">从账单管理流入</div></div>
+      <div class="pf-arrow">→</div>
+      <div class="pf-step done"><div class="pf-num">2</div><div class="pf-title">核对金额</div><div class="pf-desc">商务与承运商确认</div></div>
+      <div class="pf-arrow">→</div>
+      <div class="pf-step current"><div class="pf-num">3</div><div class="pf-title">确认发票</div><div class="pf-desc">承运商开具发票</div></div>
+      <div class="pf-arrow">→</div>
+      <div class="pf-step"><div class="pf-num">4</div><div class="pf-title">发起OA支付</div><div class="pf-desc">OA 审批流程</div></div>
+      <div class="pf-arrow">→</div>
+      <div class="pf-step"><div class="pf-num">5</div><div class="pf-title">单据完结</div><div class="pf-desc">付款完成/支付关闭</div></div>
+    </div>
+  </div>
+
+  <!-- TYPE FILTER -->
+  <div class="type-bar">
+    <div class="type-chip active" data-filter="all">全部</div>
+    <div class="type-chip" data-filter="transport">运输任务（正向）</div>
+    <div class="type-chip" data-filter="penalty">处罚账单（逆向）</div>
+    <div class="type-chip" data-filter="subsidy">补贴账单（正向）</div>
+  </div>
+
+  <!-- PAYMENT TABLE -->
+  <div class="table-wrap">
+    <div class="table-header">
+      <h3>付款列表</h3>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-primary">批量发起OA审批</button>
+        <button class="btn btn-outline">导出</button>
+      </div>
+    </div>
+    <table>
+      <thead><tr><th>付款单号</th><th>关联账单</th><th>服务商</th><th>类型</th><th>金额</th><th>发票状态</th><th>付款状态</th><th>结算月份</th><th>操作</th></tr></thead>
+      <tbody id="payBody"></tbody>
+    </table>
+  </div>
+
+  <!-- HISTORICAL -->
+  <h2 class="section-title">历史账单 — 支付关闭</h2>
+  <p class="section-sub">长期未结算的历史账单可通过支付关闭审批后完结单据</p>
+
+  <div class="table-wrap">
+    <div class="table-header"><h3>已关闭账单</h3></div>
+    <table>
+      <thead><tr><th>付款单号</th><th>关联账单</th><th>服务商</th><th>金额</th><th>关闭原因</th><th>关闭时间</th><th>状态</th></tr></thead>
+      <tbody>
+        <tr><td>PAY-202403-0089</td><td>BILL-202403-012</td><td>中通快运</td><td>¥48,200</td><td>服务商注销，无法开票</td><td>2024.05.15</td><td><span class="badge closed">已关闭</span></td></tr>
+        <tr><td>PAY-202402-0056</td><td>BILL-202402-008</td><td>百世快运</td><td>¥23,800</td><td>合同到期未续约，双方确认不付款</td><td>2024.04.28</td><td><span class="badge closed">已关闭</span></td></tr>
+        <tr><td>PAY-202401-0034</td><td>BILL-202401-005</td><td>德邦物流</td><td>¥15,600</td><td>运输任务已全部作废，无有效对账</td><td>2024.03.20</td><td><span class="badge closed">已关闭</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- DETAIL PANEL -->
+<div class="detail-overlay" id="overlay" onclick="closeDetail()"></div>
+<div class="detail-panel" id="detailPanel">
+  <button class="close-btn" onclick="closeDetail()">✕</button>
+  <h3 id="dpTitle"></h3>
+  <p class="dp-meta" id="dpMeta"></p>
+  <div class="detail-section">
+    <h4>付款信息</h4>
+    <div class="info-grid" id="dpInfo"></div>
+  </div>
+  <div class="detail-section">
+    <h4>流程进度</h4>
+    <div id="dpProgress"></div>
+  </div>
+  <div class="detail-section">
+    <h4>操作</h4>
+    <div style="display:flex;gap:12px">
+      <button class="btn btn-primary">发起OA支付审批</button>
+      <button class="btn btn-outline">确认发票已收</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const payData=[
+  {id:'PAY-202406-001',bill:'BILL-202406-001',vendor:'顺丰速运',type:'transport',typeLabel:'运输任务',amount:'¥847,200',invoice:'已开票',payStatus:'completed',month:'2024年6月',progress:5},
+  {id:'PAY-202406-002',bill:'BILL-202406-002',vendor:'中通快运',type:'transport',typeLabel:'运输任务',amount:'¥524,800',invoice:'已开票',payStatus:'processing',month:'2024年6月',progress:4},
+  {id:'PAY-202406-003',bill:'BILL-202406-004',vendor:'安能物流',type:'transport',typeLabel:'运输任务',amount:'¥356,000',invoice:'已开票',payStatus:'processing',month:'2024年6月',progress:4},
+  {id:'PAY-202406-004',bill:'BILL-202406-005',vendor:'京东物流',type:'transport',typeLabel:'运输任务',amount:'¥328,400',invoice:'待开票',payStatus:'pending',month:'2024年6月',progress:2},
+  {id:'PAY-202406-005',bill:'BILL-202406-P01',vendor:'顺丰速运',type:'penalty',typeLabel:'处罚',amount:'-¥12,400',invoice:'—',payStatus:'pending',month:'2024年6月',progress:1},
+  {id:'PAY-202406-006',bill:'BILL-202406-S01',vendor:'德邦物流',type:'subsidy',typeLabel:'补贴',amount:'¥35,000',invoice:'待开票',payStatus:'pending',month:'2024年6月',progress:2},
+  {id:'PAY-202406-007',bill:'BILL-202406-003',vendor:'德邦物流',type:'transport',typeLabel:'运输任务',amount:'¥412,600',invoice:'已核验',payStatus:'processing',month:'2024年6月',progress:4},
+  {id:'PAY-202406-008',bill:'BILL-202406-006',vendor:'百世快运',type:'transport',typeLabel:'运输任务',amount:'¥198,500',invoice:'待开票',payStatus:'pending',month:'2024年6月',progress:1},
+];
+
+const typeCls={transport:'forward',penalty:'reverse',subsidy:'subsidy'};
+const statusCls={pending:'pending',processing:'processing',completed:'completed',closed:'closed'};
+const statusLabel={pending:'待付款',processing:'付款中',completed:'已完成',closed:'已关闭'};
+const progressLabels=['账单流入','核对金额','确认发票','发起OA审批','单据完结'];
+
+function render(filter){
+  const tb=document.getElementById('payBody');tb.innerHTML='';
+  const data=filter==='all'?payData:payData.filter(p=>p.type===filter);
+  data.forEach((p,i)=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td style="font-weight:600">${p.id}</td><td>${p.bill}</td><td>${p.vendor}</td><td><span class="badge ${typeCls[p.type]}">${p.typeLabel}</span></td><td style="font-weight:600;color:${p.amount.startsWith('-')?'#dc2626':'#1a1a2e'}">${p.amount}</td><td>${p.invoice}</td><td><span class="badge ${statusCls[p.payStatus]}">${statusLabel[p.payStatus]}</span></td><td>${p.month}</td><td><span style="font-size:12px;color:#0f766e;cursor:pointer;font-weight:600" onclick="openDetail(${i})">详情</span></td>`;
+    tb.appendChild(tr);
+  });
+}
+render('all');
+
+document.querySelectorAll('.type-chip').forEach(c=>{c.addEventListener('click',()=>{document.querySelectorAll('.type-chip').forEach(x=>x.classList.remove('active'));c.classList.add('active');render(c.dataset.filter)})});
+
+function openDetail(i){
+  const p=payData[i];
+  document.getElementById('dpTitle').textContent=p.id;
+  document.getElementById('dpMeta').textContent=`${p.vendor} | ${p.typeLabel} | ${p.amount} | ${p.month}`;
+  document.getElementById('dpInfo').innerHTML=`<div class="info-item"><div class="ii-label">关联账单</div><div class="ii-value">${p.bill}</div></div><div class="info-item"><div class="ii-label">服务商</div><div class="ii-value">${p.vendor}</div></div><div class="info-item"><div class="ii-label">账单类型</div><div class="ii-value">${p.typeLabel}</div></div><div class="info-item"><div class="ii-label">金额</div><div class="ii-value">${p.amount}</div></div><div class="info-item"><div class="ii-label">发票状态</div><div class="ii-value">${p.invoice}</div></div><div class="info-item"><div class="ii-label">付款状态</div><div class="ii-value">${statusLabel[p.payStatus]}</div></div>`;
+  const prog=document.getElementById('dpProgress');prog.innerHTML='';
+  progressLabels.forEach((label,j)=>{
+    const done=j<p.progress;const cur=j===p.progress-1;
+    const cls=done?'done':cur?'current':'';
+    prog.innerHTML+=`<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f1f3f7"><div style="width:24px;height:24px;border-radius:50%;background:${done?'#dcfce7':'#f1f3f7'};color:${done?'#16a34a':'#94a3b8'};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0">${done?'✓':j+1}</div><span style="font-size:13px;font-weight:${cur?'600':'400'};color:${cur?'#0f766e':'#475569'}">${label}</span>${cur?'<span style="margin-left:auto;font-size:10px;font-weight:700;background:#eef2ff;color:#4f46e5;padding:2px 8px;border-radius:8px">当前</span>':''}</div>`;
+  });
+  document.getElementById('overlay').style.display='block';
+  document.getElementById('detailPanel').classList.add('open');
+}
+function closeDetail(){document.getElementById('overlay').style.display='none';document.getElementById('detailPanel').classList.remove('open')}
+</script>
+</body>
+</html>

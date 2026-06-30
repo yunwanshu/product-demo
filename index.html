@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>产品设计作品集 — 李佳珍</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f5f6fa;color:#1a1a2e;line-height:1.6;min-height:100vh}
+.container{max-width:960px;margin:0 auto;padding:60px 32px 80px}
+.hero{text-align:center;margin-bottom:56px}
+.hero h1{font-size:32px;font-weight:700;margin-bottom:8px;letter-spacing:-.5px}
+.hero .subtitle{font-size:16px;color:#64748b;margin-bottom:4px}
+.hero .desc{font-size:14px;color:#94a3b8;max-width:540px;margin:0 auto}
+/* SECTION */
+.section{margin-bottom:48px}
+.section-header{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.section-header .dot{width:10px;height:10px;border-radius:50%}
+.section-header h2{font-size:20px;font-weight:700}
+.section-desc{font-size:13px;color:#94a3b8;margin-bottom:20px}
+/* CARDS */
+.card-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
+.card{background:#fff;border:1px solid #e8eaef;border-radius:14px;padding:24px;text-decoration:none;color:#1a1a2e;transition:all .2s;display:flex;flex-direction:column}
+.card:hover{border-color:#818cf8;box-shadow:0 4px 20px rgba(79,70,229,.08);transform:translateY(-2px)}
+.card .card-num{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px}
+.card .card-title{font-size:16px;font-weight:600;margin-bottom:6px}
+.card .card-desc{font-size:13px;color:#64748b;line-height:1.6;flex:1}
+.card .card-tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:14px}
+.card .card-tags span{font-size:10px;font-weight:600;padding:3px 10px;border-radius:10px;background:#f1f3f7;color:#64748b}
+/* FOOTER */
+.footer{text-align:center;font-size:12px;color:#94a3b8;margin-top:60px;padding-top:24px;border-top:1px solid #e8eaef}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="hero">
+    <h1>产品设计作品集</h1>
+    <p class="subtitle">李佳珍 · 产品经理</p>
+    <p class="desc">以下 Demo 展示我在实验平台设计、AI 策略体系搭建、后台结算系统架构方面的产品能力。点击卡片进入对应系统。</p>
+  </div>
+
+  <!-- AIGC -->
+  <div class="section">
+    <div class="section-header">
+      <div class="dot" style="background:#4f46e5"></div>
+      <h2>AIGC 商品优化平台</h2>
+    </div>
+    <p class="section-desc">拼多多/Temu 期间的 AIGC 商品标题优化体系，覆盖 ABTest 实验、翻译优化、AI 标题策略三大模块，含 Agent 智能化增强方案。</p>
+    <div class="card-grid">
+      <a href="experiment-platform.html" class="card">
+        <div class="card-num" style="color:#4f46e5">01 · 实验平台</div>
+        <div class="card-title">ABTest 实验平台</div>
+        <div class="card-desc">观测已上线实验的数据结果。含智能实验设计、贝叶斯序贯检验、Meta-Analysis 跨实验洞察，Agent 自动回收与推全量。</div>
+        <div class="card-tags"><span>贝叶斯检验</span><span>智能实验设计</span><span>Meta-Analysis</span></div>
+      </a>
+      <a href="translation-platform.html" class="card">
+        <div class="card-num" style="color:#4f46e5">02 · 翻译平台</div>
+        <div class="card-title">翻译优化平台</div>
+        <div class="card-desc">管理翻译替换策略，覆盖翻译前预处理与翻译后修正两条路径。Agent 自动挖掘替换规则、智能路由、动态质检阈值校准。</div>
+        <div class="card-tags"><span>双模式切换</span><span>规则自发现</span><span>动态阈值</span></div>
+      </a>
+      <a href="ai-title-strategy.html" class="card">
+        <div class="card-num" style="color:#4f46e5">03 · AI 策略库</div>
+        <div class="card-title">AI 标题策略库</div>
+        <div class="card-desc">针对 8 个国家 × 6 个类目沉淀 AI Prompt。LLM-as-Judge 四维自动评估、Prompt 自迭代反馈循环、跨国家智能迁移。</div>
+        <div class="card-tags"><span>LLM-as-Judge</span><span>Prompt 自迭代</span><span>跨国家迁移</span></div>
+      </a>
+    </div>
+  </div>
+
+  <!-- SETTLEMENT -->
+  <div class="section">
+    <div class="section-header">
+      <div class="dot" style="background:#0f766e"></div>
+      <h2>仓间调拨结算系统</h2>
+    </div>
+    <p class="section-desc">仓间调拨业务的全链路结算系统，覆盖计费规则配置、对账出账判断、账单聚合校验、付款审批完结四步流程。</p>
+    <div class="card-grid">
+      <a href="billing-rules.html" class="card">
+        <div class="card-num" style="color:#0f766e">01 · 计费规则</div>
+        <div class="card-title">计费规则配置</div>
+        <div class="card-desc">为运输任务配置计费准则。固定计费（一口价）、阶梯计费（起步价+续公里）、包月计费三种模式，含唯一性校验。</div>
+        <div class="card-tags"><span>三种计费模式</span><span>唯一性校验</span><span>规则生命周期</span></div>
+      </a>
+      <a href="reconciliation.html" class="card">
+        <div class="card-num" style="color:#0f766e">02 · 对账管理</div>
+        <div class="card-title">对账管理</div>
+        <div class="card-desc">系统自动对运输任务做出账判断（10+ 步决策链），运营复核确认。交互式决策树可追溯每个任务的判断路径。</div>
+        <div class="card-tags"><span>决策树可视化</span><span>路径追溯</span><span>批量操作</span></div>
+      </a>
+      <a href="bill-management.html" class="card">
+        <div class="card-num" style="color:#0f766e">03 · 账单管理</div>
+        <div class="card-title">账单管理</div>
+        <div class="card-desc">已确认的对账单按服务商+类型+月份聚合为账单。12 项校验流程、风控检查、在线离线对账、审批流管理。</div>
+        <div class="card-tags"><span>12项校验</span><span>风控检查</span><span>审批流</span></div>
+      </a>
+      <a href="payment-management.html" class="card">
+        <div class="card-num" style="color:#0f766e">04 · 付款管理</div>
+        <div class="card-title">付款管理</div>
+        <div class="card-desc">审批通过的账单进入付款流程。核对金额、确认发票、发起 OA 支付审批，支持运输/处罚/补贴三种账单类型。</div>
+        <div class="card-tags"><span>发票核验</span><span>OA审批</span><span>支付关闭</span></div>
+      </a>
+    </div>
+  </div>
+
+  <div class="footer">
+    © 2024 李佳珍 · 产品设计作品集 · 仅供面试展示使用
+  </div>
+</div>
+</body>
+</html>
