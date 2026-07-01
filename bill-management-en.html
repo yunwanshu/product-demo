@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bill Management — Inter-Warehouse Transfer Settlement</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f5f6fa;color:#1a1a2e;line-height:1.6}
+.top-nav{background:#fff;border-bottom:1px solid #e2e4e9;display:flex;align-items:center;padding:0 32px;height:56px;position:sticky;top:0;z-index:100}
+.top-nav .brand{font-size:15px;font-weight:700;color:#0f766e;margin-right:40px}
+.top-nav a{text-decoration:none;color:#64748b;font-size:14px;font-weight:500;padding:16px 14px;border-bottom:2px solid transparent;transition:.2s}
+.top-nav a:hover{color:#0f766e}.top-nav a.active{color:#0f766e;border-bottom-color:#0f766e}
+.lang-switch{margin-left:auto;font-size:12px;padding:6px 14px;border:1px solid #e2e4e9;border-radius:6px;color:#64748b;text-decoration:none;font-weight:500;transition:.2s}
+.lang-switch:hover{border-color:#0f766e;color:#0f766e}
+.flow-bar{background:linear-gradient(90deg,#0f766e,#14b8a6);padding:12px 32px;display:flex;align-items:center;gap:0;overflow-x:auto}
+.flow-step{display:flex;align-items:center;padding:6px 18px;font-size:13px;font-weight:600;white-space:nowrap;text-decoration:none}
+.flow-step.current{background:rgba(255,255,255,.2);color:#fff;border-radius:16px}
+.flow-step.done{color:rgba(255,255,255,.55)}
+.flow-step.next{color:rgba(255,255,255,.35)}
+.flow-arrow{color:rgba(255,255,255,.3);font-size:16px;padding:0 6px}
+.page{max-width:1240px;margin:0 auto;padding:24px 32px 60px}
+.page-title{font-size:22px;font-weight:700;margin-bottom:4px}
+.page-sub{font-size:13px;color:#94a3b8;margin-bottom:24px}
+.section-title{font-size:16px;font-weight:700;margin-bottom:4px;margin-top:32px}
+.section-sub{font-size:13px;color:#94a3b8;margin-bottom:18px}
+.card{background:#fff;border-radius:12px;border:1px solid #e8eaef;padding:24px;margin-bottom:20px}
+.card h3{font-size:15px;font-weight:600;margin-bottom:14px}
+/* KPI */
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:28px}
+.kpi-card{background:#fff;border-radius:12px;padding:18px 22px;border:1px solid #e8eaef}
+.kpi-card .label{font-size:11px;color:#94a3b8;font-weight:600;text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px}
+.kpi-card .value{font-size:26px;font-weight:700}
+.kpi-card .delta{font-size:12px;margin-top:2px;color:#64748b}
+/* TABLE */
+.table-wrap{background:#fff;border-radius:12px;border:1px solid #e8eaef;overflow:hidden;margin-bottom:20px}
+.table-header{padding:16px 24px;border-bottom:1px solid #e8eaef;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px}
+.table-header h3{font-size:15px;font-weight:600}
+table{width:100%;border-collapse:collapse}
+thead th{text-align:left;font-size:11px;color:#94a3b8;font-weight:600;text-transform:uppercase;letter-spacing:.5px;padding:10px 14px;border-bottom:1px solid #e8eaef}
+tbody td{padding:12px 14px;font-size:13px;border-bottom:1px solid #f1f3f7}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover{background:#f8f9fc;cursor:pointer}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600}
+.badge.draft{background:#f1f3f7;color:#64748b}
+.badge.pending{background:#fef3c7;color:#d97706}
+.badge.approved{background:#dcfce7;color:#16a34a}
+.badge.rejected{background:#fee2e2;color:#dc2626}
+.risk-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:4px}
+.risk-dot.safe{background:#22c55e}.risk-dot.warn{background:#f59e0b}.risk-dot.danger{background:#ef4444}
+/* VERIFY STEPS */
+.verify-flow{display:flex;gap:0;overflow-x:auto;padding:8px 0}
+.vf-step{flex:1;min-width:80px;text-align:center;position:relative;padding:0 4px}
+.vf-step .vf-dot{width:32px;height:32px;border-radius:50%;margin:0 auto 6px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;border:2px solid #e2e4e9;background:#fff;color:#94a3b8}
+.vf-step.pass .vf-dot{background:#dcfce7;border-color:#22c55e;color:#16a34a}
+.vf-step.fail .vf-dot{background:#fee2e2;border-color:#ef4444;color:#dc2626}
+.vf-step.active .vf-dot{background:#0f766e;border-color:#0f766e;color:#fff}
+.vf-step .vf-name{font-size:10px;font-weight:600;color:#64748b;line-height:1.3}
+.vf-step.pass .vf-name{color:#16a34a}
+.vf-step.fail .vf-name{color:#dc2626}
+.vf-connector{position:absolute;top:16px;left:calc(50% + 16px);right:calc(-50% + 16px);height:2px;background:#e2e4e9}
+.vf-step.pass .vf-connector{background:#22c55e}
+.vf-step.fail .vf-connector{background:#ef4444}
+/* DETAIL PANEL */
+.detail-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.25);z-index:200}
+.detail-panel{position:fixed;top:0;right:0;width:660px;height:100vh;background:#fff;z-index:201;overflow-y:auto;padding:32px;box-shadow:-4px 0 24px rgba(0,0,0,.08);transform:translateX(100%);transition:transform .3s ease}
+.detail-panel.open{transform:translateX(0)}
+.detail-panel .close-btn{position:absolute;top:16px;right:16px;width:32px;height:32px;border:none;background:#f1f3f7;border-radius:8px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center}
+.detail-panel h3{font-size:18px;font-weight:700;margin-bottom:4px}
+.detail-panel .dp-meta{font-size:12px;color:#94a3b8;margin-bottom:20px}
+.detail-section{margin-bottom:24px}
+.detail-section h4{font-size:12px;font-weight:600;color:#64748b;margin-bottom:10px;text-transform:uppercase;letter-spacing:.4px}
+.mini-table{width:100%;border-collapse:collapse;margin-bottom:12px}
+.mini-table th{text-align:left;font-size:11px;color:#94a3b8;font-weight:600;padding:6px 10px;border-bottom:1px solid #e8eaef}
+.mini-table td{padding:8px 10px;font-size:13px;border-bottom:1px solid #f1f3f7}
+.risk-list{list-style:none;padding:0}
+.risk-list li{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f1f3f7;font-size:13px}
+.risk-list li:last-child{border-bottom:none}
+.btn{padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:.2s}
+.btn-primary{background:#0f766e;color:#fff}.btn-primary:hover{background:#0d6357}
+.btn-outline{background:transparent;border:1px solid #e2e4e9;color:#64748b}.btn-outline:hover{border-color:#0f766e;color:#0f766e}
+.btn-danger{background:#ef4444;color:#fff}
+@media(max-width:768px){.kpi-row{grid-template-columns:repeat(2,1fr)}.detail-panel{width:100%}}
+</style>
+</head>
+<body>
+
+<nav class="top-nav">
+  <span class="brand">Inter-Warehouse Settlement</span>
+  <a href="billing-rules-en.html">Billing Rules</a>
+  <a href="reconciliation-en.html">Reconciliation</a>
+  <a href="bill-management-en.html" class="active">Bill Management</a>
+  <a href="payment-management-en.html">Payment Management</a>
+  <a href="bill-management.html" class="lang-switch">Switch to Chinese</a>
+</nav>
+
+<div class="flow-bar">
+  <a href="billing-rules-en.html" class="flow-step done">1. Configure Rules</a><span class="flow-arrow">&rarr;</span>
+  <a href="reconciliation-en.html" class="flow-step done">2. Reconciliation</a><span class="flow-arrow">&rarr;</span>
+  <span class="flow-step current">3. Generate Bills</span><span class="flow-arrow">&rarr;</span>
+  <a href="payment-management-en.html" class="flow-step next">4. Payment</a>
+</div>
+
+<div class="page">
+  <h1 class="page-title">Bill Management</h1>
+  <p class="page-sub">Confirmed reconciliation records are aggregated into bills by "Provider + Settlement Type + Month", then verified and approved before entering the payment process.</p>
+
+  <!-- KPI -->
+  <div class="kpi-row">
+    <div class="kpi-card"><div class="label">Total Bills This Month</div><div class="value">24</div></div>
+    <div class="kpi-card"><div class="label">Pending Approval</div><div class="value" style="color:#d97706">8</div><div class="delta">3 of which have verification risks</div></div>
+    <div class="kpi-card"><div class="label">Approved</div><div class="value" style="color:#16a34a">14</div><div class="delta">Total amount &yen;2,847,600</div></div>
+    <div class="kpi-card"><div class="label">Rejected</div><div class="value" style="color:#dc2626">2</div><div class="delta">Rejection reason: Amount mismatch</div></div>
+  </div>
+
+  <!-- VERIFY FLOW -->
+  <h2 class="section-title">Bill Verification Process (12 Items)</h2>
+  <p class="section-sub">Bills must pass all of the following checks sequentially before approval submission. Any failure blocks submission.</p>
+
+  <div class="card">
+    <div class="verify-flow" id="verifyFlow"></div>
+  </div>
+
+  <!-- BILL TABLE -->
+  <div class="table-wrap">
+    <div class="table-header"><h3>Bill List</h3><span style="font-size:12px;color:#94a3b8">Click to view bill details and verification status</span></div>
+    <table>
+      <thead><tr><th>Bill ID</th><th>Logistics Provider</th><th>Settlement Type</th><th>Settlement Month</th><th>Reconciliation Count</th><th>Total Amount</th><th>Verification Status</th><th>Approval Status</th></tr></thead>
+      <tbody id="billBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- DETAIL PANEL -->
+<div class="detail-overlay" id="overlay" onclick="closeDetail()"></div>
+<div class="detail-panel" id="detailPanel">
+  <button class="close-btn" onclick="closeDetail()">&cross;</button>
+  <h3 id="dpTitle"></h3>
+  <p class="dp-meta" id="dpMeta"></p>
+
+  <div class="detail-section">
+    <h4>Included Reconciliation Records</h4>
+    <table class="mini-table">
+      <thead><tr><th>Reconciliation ID</th><th>Settlement Type</th><th>Task Count</th><th>Amount</th></tr></thead>
+      <tbody id="dpRecon"></tbody>
+    </table>
+  </div>
+
+  <div class="detail-section">
+    <h4>12-Item Verification Results</h4>
+    <ul class="risk-list" id="dpChecks"></ul>
+  </div>
+
+  <div class="detail-section">
+    <h4>Approval Actions</h4>
+    <div style="display:flex;gap:12px">
+      <button class="btn btn-primary">Submit for Approval</button>
+      <button class="btn btn-outline">Save Draft</button>
+      <button class="btn btn-danger">Reject</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const verifySteps=['Financial Risk','Reconciliation Update','All Reconciliations Included','Risk Control Check','Amount Consistency','Transfer First Payment','Allocated Amount','Online-Offline Reconciliation (Bills)','Online-Offline Reconciliation (Reconciliation Records)','First Payment Pending Adjustment','Adjustment Amount Change','WMS Voided Tasks'];
+const billData=[
+  {id:'BILL-202406-001',vendor:'SF Express',type:'Per-Trip',month:'June 2024',count:12,amount:'&yen;847,200',verify:'pass',approval:'approved',
+   recons:[{id:'REC-SF-001',type:'Per-Trip',tasks:48,amt:'&yen;342,100'},{id:'REC-SF-002',type:'Per-Trip',tasks:36,amt:'&yen;285,600'},{id:'REC-SF-003',type:'Per-Trip',tasks:24,amt:'&yen;219,500'}],
+   checks:[1,1,1,1,1,1,1,1,1,1,1,1]},
+  {id:'BILL-202406-002',vendor:'ZTO Freight',type:'Per-Trip',month:'June 2024',count:8,amount:'&yen;524,800',verify:'pass',approval:'approved',
+   recons:[{id:'REC-ZT-001',type:'Per-Trip',tasks:42,amt:'&yen;298,400'},{id:'REC-ZT-002',type:'Per-Trip',tasks:28,amt:'&yen;226,400'}],
+   checks:[1,1,1,1,1,1,1,1,1,1,1,1]},
+  {id:'BILL-202406-003',vendor:'Deppon Logistics',type:'Per-Trip',month:'June 2024',count:6,amount:'&yen;412,600',verify:'warn',approval:'pending',
+   recons:[{id:'REC-DB-001',type:'Per-Trip',tasks:31,amt:'&yen;248,300'},{id:'REC-DB-002',type:'Per-Trip',tasks:18,amt:'&yen;164,300'}],
+   checks:[1,1,1,1,0,1,1,1,1,1,1,1]},
+  {id:'BILL-202406-004',vendor:'ANE Logistics',type:'Monthly Subscription',month:'June 2024',count:4,amount:'&yen;356,000',verify:'pass',approval:'approved',
+   recons:[{id:'REC-AN-001',type:'Monthly',tasks:48,amt:'&yen;180,000'},{id:'REC-AN-002',type:'Monthly',tasks:52,amt:'&yen;176,000'}],
+   checks:[1,1,1,1,1,1,1,1,1,1,1,1]},
+  {id:'BILL-202406-005',vendor:'JD Logistics',type:'Per-Trip',month:'June 2024',count:5,amount:'&yen;328,400',verify:'fail',approval:'pending',
+   recons:[{id:'REC-JD-001',type:'Per-Trip',tasks:22,amt:'&yen;186,200'},{id:'REC-JD-002',type:'Per-Trip',tasks:16,amt:'&yen;142,200'}],
+   checks:[1,1,0,1,1,1,1,0,1,1,1,1]},
+  {id:'BILL-202406-006',vendor:'Best Freight',type:'Monthly Subscription',month:'June 2024',count:3,amount:'&yen;198,500',verify:'warn',approval:'draft',
+   recons:[{id:'REC-BS-001',type:'Monthly',tasks:36,amt:'&yen;125,000'},{id:'REC-BS-002',type:'Monthly',tasks:20,amt:'&yen;73,500'}],
+   checks:[1,1,1,1,1,1,0,1,1,1,1,1]},
+  {id:'BILL-202406-007',vendor:'SF Express',type:'Per-Trip',month:'May 2024',count:10,amount:'&yen;780,100',verify:'pass',approval:'rejected',
+   recons:[{id:'REC-SF-M5-001',type:'Per-Trip',tasks:55,amt:'&yen;428,600'},{id:'REC-SF-M5-002',type:'Per-Trip',tasks:38,amt:'&yen;351,500'}],
+   checks:[1,1,1,1,0,1,1,1,1,1,1,1]},
+  {id:'BILL-202406-008',vendor:'Deppon Logistics',type:'Monthly Subscription',month:'June 2024',count:2,amount:'&yen;180,000',verify:'pass',approval:'draft',
+   recons:[{id:'REC-DB-M-001',type:'Monthly',tasks:30,amt:'&yen;180,000'}],
+   checks:[1,1,1,1,1,1,1,1,1,1,1,1]},
+];
+
+// Render verify flow
+const vfEl=document.getElementById('verifyFlow');
+verifySteps.forEach((name,i)=>{
+  const cls=i<8?'pass':i===8?'fail':i===9?'active':'';
+  vfEl.innerHTML+=`<div class="vf-step ${cls}" style="flex:1"><div class="vf-dot">${i+1}</div><div class="vf-name">${name}</div>${i<verifySteps.length-1?'<div class="vf-connector"></div>':''}</div>`;
+});
+
+// Render bill table
+const tbody=document.getElementById('billBody');
+const verifyLabel={pass:['&check; All Passed','approved'],warn:['&cross; Risks Detected','pending'],fail:['&cross; Verification Failed','rejected']};
+const approvalLabel={draft:['Pending Verification','draft'],pending:['Pending Approval','pending'],approved:['Approved','approved'],rejected:['Rejected','rejected']};
+billData.forEach((b,i)=>{
+  const riskCls=b.verify==='pass'?'safe':b.verify==='warn'?'warn':'danger';
+  const[vl,vlc]=verifyLabel[b.verify];
+  const[al,alc]=approvalLabel[b.approval];
+  const tr=document.createElement('tr');
+  tr.innerHTML=`<td style="font-weight:600">${b.id}</td><td>${b.vendor}</td><td>${b.type}</td><td>${b.month}</td><td>${b.count}</td><td style="font-weight:600">${b.amount}</td><td><span class="risk-dot ${riskCls}"></span>${vl}</td><td><span class="badge ${alc}">${al}</span></td>`;
+  tr.onclick=()=>openDetail(i);
+  tbody.appendChild(tr);
+});
+
+function openDetail(i){
+  const b=billData[i];
+  document.getElementById('dpTitle').textContent=b.id;
+  document.getElementById('dpMeta').textContent=`${b.vendor} | ${b.type} | ${b.month} | ${b.amount}`;
+  const rTb=document.getElementById('dpRecon');rTb.innerHTML='';
+  b.recons.forEach(r=>{rTb.innerHTML+=`<tr><td>${r.id}</td><td>${r.type}</td><td>${r.tasks}</td><td>${r.amt}</td></tr>`});
+  const cList=document.getElementById('dpChecks');cList.innerHTML='';
+  b.checks.forEach((c,ci)=>{
+    const icon=c?'&check;':'&cross;';const color=c?'#16a34a':'#dc2626';const bg=c?'#dcfce7':'#fee2e2';
+    cList.innerHTML+=`<li><span style="width:22px;height:22px;border-radius:50%;background:${bg};color:${color};display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0">${icon}</span><span style="font-weight:500">${verifySteps[ci]}</span><span style="margin-left:auto;font-size:12px;font-weight:600;color:${color}">${c?'Passed':'Failed'}</span></li>`;
+  });
+  document.getElementById('overlay').style.display='block';
+  document.getElementById('detailPanel').classList.add('open');
+}
+function closeDetail(){document.getElementById('overlay').style.display='none';document.getElementById('detailPanel').classList.remove('open')}
+</script>
+</body>
+</html>

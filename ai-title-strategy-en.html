@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Title Strategy Library — AIGC Product Optimization</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f5f6fa;color:#1a1a2e;line-height:1.6}
+.top-nav{background:#fff;border-bottom:1px solid #e2e4e9;display:flex;align-items:center;padding:0 32px;height:56px;position:sticky;top:0;z-index:100}
+.top-nav .brand{font-size:15px;font-weight:700;color:#4f46e5;margin-right:40px;letter-spacing:-.3px}
+.top-nav a{text-decoration:none;color:#64748b;font-size:14px;font-weight:500;padding:16px 16px;border-bottom:2px solid transparent;transition:.2s}
+.top-nav a:hover{color:#4f46e5}.top-nav a.active{color:#4f46e5;border-bottom-color:#4f46e5}
+.lang-switch{margin-left:auto;text-decoration:none;font-size:12px;font-weight:600;color:#4f46e5;background:#eef2ff;padding:6px 14px;border-radius:16px;border:1px solid #c7d2fe;transition:.2s;white-space:nowrap}
+.lang-switch:hover{background:#4f46e5;color:#fff}
+.agent-bar{background:linear-gradient(90deg,#4f46e5,#6366f1);padding:10px 32px;display:flex;align-items:center;gap:12px;overflow-x:auto}
+.agent-bar .ab-label{color:rgba(255,255,255,.7);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap}
+.agent-bar .ab-step{padding:5px 14px;border-radius:16px;font-size:12px;font-weight:600;white-space:nowrap;cursor:pointer;transition:.2s;text-decoration:none}
+.agent-bar .ab-step.current{background:rgba(255,255,255,.2);color:#fff}
+.agent-bar .ab-step.done{background:rgba(255,255,255,.1);color:rgba(255,255,255,.6)}
+.agent-bar .ab-step.next{background:transparent;color:rgba(255,255,255,.35);border:1px dashed rgba(255,255,255,.25)}
+.agent-bar .ab-arrow{color:rgba(255,255,255,.3);font-size:14px}
+.page{max-width:1240px;margin:0 auto;padding:24px 32px 60px}
+.page-title{font-size:22px;font-weight:700;margin-bottom:4px}
+.page-sub{font-size:13px;color:#94a3b8;margin-bottom:24px}
+.section-title{font-size:16px;font-weight:700;margin-bottom:4px;margin-top:36px;display:flex;align-items:center;gap:8px}
+.section-title .badge-agent{font-size:10px;font-weight:700;background:#eef2ff;color:#4f46e5;padding:3px 10px;border-radius:10px;text-transform:uppercase;letter-spacing:.4px}
+.section-sub{font-size:13px;color:#94a3b8;margin-bottom:18px}
+.card{background:#fff;border-radius:12px;border:1px solid #e8eaef;padding:24px;margin-bottom:20px}
+.card h3{font-size:15px;font-weight:600;margin-bottom:14px}
+/* WORKFLOW */
+.workflow{display:flex;align-items:stretch;gap:0;overflow-x:auto;padding:4px 0 12px}
+.wf-step{flex:1;min-width:130px;background:#fff;border:1px solid #e8eaef;border-radius:12px;padding:16px 14px;text-align:center;position:relative}
+.wf-step .wf-num{width:26px;height:26px;border-radius:50%;background:#4f46e5;color:#fff;font-size:11px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;margin-bottom:6px}
+.wf-step .wf-title{font-size:13px;font-weight:600;margin-bottom:4px}
+.wf-step .wf-desc{font-size:11px;color:#94a3b8;line-height:1.5}
+.wf-step.agent{border-color:#c7d2fe;background:#eef2ff}
+.wf-step.agent .wf-num{background:#6366f1}
+.wf-step.loop{border-color:#fcd34d;background:#fffbeb}
+.wf-step.loop .wf-num{background:#f59e0b}
+.wf-arrow{display:flex;align-items:center;padding:0 3px;color:#cbd5e1;font-size:16px;flex-shrink:0}
+/* LLM JUDGE */
+.judge-pipeline{display:grid;grid-template-columns:2fr 3fr;gap:20px}
+.judge-left{display:flex;flex-direction:column;gap:12px}
+.judge-dim{background:#f8f9fc;border:1px solid #e8eaef;border-radius:10px;padding:14px 16px;display:flex;align-items:center;gap:12px}
+.judge-dim .jd-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.judge-dim .jd-name{font-size:13px;font-weight:600}
+.judge-dim .jd-desc{font-size:11px;color:#94a3b8}
+.judge-dim .jd-score{margin-left:auto;font-size:20px;font-weight:700;color:#1a1a2e}
+.judge-right{background:#f8f9fc;border:1px solid #e8eaef;border-radius:10px;padding:18px 20px}
+.judge-right .jr-title{font-size:12px;font-weight:600;color:#64748b;margin-bottom:10px;text-transform:uppercase;letter-spacing:.4px}
+.judge-right .jr-sample{font-size:13px;line-height:1.7;padding:10px 0;border-bottom:1px solid #e8eaef}
+.judge-right .jr-sample:last-child{border-bottom:none}
+.judge-right .jr-label{font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px}
+.judge-right .jr-bar{height:6px;border-radius:3px;background:#e2e4e9;overflow:hidden;margin-top:4px}
+.judge-right .jr-fill{height:100%;border-radius:3px}
+/* ITERATION LOOP */
+.iter-loop{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.iter-card{background:#f8f9fc;border:1px solid #e8eaef;border-radius:12px;padding:20px}
+.iter-card .ic-header{font-size:13px;font-weight:600;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.iter-card .ic-header .ic-dot{width:8px;height:8px;border-radius:50%}
+.iter-card .ic-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #e8eaef;font-size:13px}
+.iter-card .ic-row:last-child{border-bottom:none}
+.iter-card .ic-change{font-size:11px;padding:2px 8px;border-radius:8px;font-weight:600}
+.iter-card .ic-change.improve{background:#dcfce7;color:#16a34a}
+.iter-card .ic-change.regress{background:#fee2e2;color:#dc2626}
+/* TRANSFER */
+.transfer-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.transfer-card{background:#fff;border:1px solid #e8eaef;border-radius:12px;padding:18px;position:relative;overflow:hidden}
+.transfer-card .tc-from-to{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:600;margin-bottom:10px}
+.transfer-card .tc-flag{font-size:18px}
+.transfer-card .tc-arrow{color:#cbd5e1}
+.transfer-card .tc-status{font-size:11px;font-weight:700;padding:3px 10px;border-radius:10px;margin-bottom:8px;display:inline-block}
+.transfer-card .tc-status.ready{background:#dcfce7;color:#16a34a}
+.transfer-card .tc-status.pending{background:#fef3c7;color:#d97706}
+.transfer-card .tc-status.tested{background:#dbeafe;color:#2563eb}
+.transfer-card .tc-desc{font-size:12px;color:#64748b;line-height:1.6}
+.transfer-card .tc-similarity{margin-top:8px;font-size:12px;font-weight:600;color:#4f46e5}
+/* COUNTRY TABS */
+.country-bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px}
+.country-chip{padding:8px 18px;border-radius:20px;font-size:13px;font-weight:500;border:1px solid #e2e4e9;background:#fff;cursor:pointer;transition:.2s;user-select:none}
+.country-chip:hover{border-color:#818cf8;color:#4f46e5}
+.country-chip.active{background:#4f46e5;color:#fff;border-color:#4f46e5}
+/* PROMPT GRID */
+.prompt-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:12px}
+.prompt-card{background:#fff;border:1px solid #e8eaef;border-radius:12px;padding:20px;cursor:pointer;transition:.2s}
+.prompt-card:hover{border-color:#818cf8;box-shadow:0 2px 12px rgba(79,70,229,.08)}
+.prompt-card .cat{font-size:14px;font-weight:600;margin-bottom:8px;display:flex;align-items:center;gap:8px}
+.prompt-card .cat .dot{width:8px;height:8px;border-radius:50%}
+.prompt-card .preview{font-size:12px;color:#64748b;line-height:1.7;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;margin-bottom:12px;font-family:'SF Mono',Menlo,monospace}
+.prompt-card .meta-row{display:flex;justify-content:space-between;align-items:center;font-size:11px;color:#94a3b8}
+.prompt-card .version{background:#eef2ff;color:#4338ca;padding:2px 8px;border-radius:10px;font-weight:600;font-size:10px}
+.prompt-card .judge-score{background:#dcfce7;color:#16a34a;padding:2px 8px;border-radius:10px;font-weight:600;font-size:10px}
+/* DETAIL */
+.detail-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.25);z-index:200}
+.detail-panel{position:fixed;top:0;right:0;width:680px;height:100vh;background:#fff;z-index:201;overflow-y:auto;padding:32px;box-shadow:-4px 0 24px rgba(0,0,0,.08);transform:translateX(100%);transition:transform .3s ease}
+.detail-panel.open{transform:translateX(0)}
+.detail-panel .close-btn{position:absolute;top:16px;right:16px;width:32px;height:32px;border:none;background:#f1f3f7;border-radius:8px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center}
+.detail-panel h3{font-size:18px;font-weight:700;margin-bottom:4px}
+.detail-panel .dp-meta{font-size:12px;color:#94a3b8;margin-bottom:20px}
+.detail-section{margin-bottom:24px}
+.detail-section h4{font-size:12px;font-weight:600;color:#64748b;margin-bottom:10px;text-transform:uppercase;letter-spacing:.4px}
+.prompt-block{background:#f8f9fc;border:1px solid #e2e4e9;border-radius:10px;padding:18px 20px;font-size:13px;line-height:1.8;font-family:'SF Mono',Menlo,monospace;white-space:pre-wrap;color:#334155}
+.version-list{list-style:none;padding:0}
+.version-item{display:flex;gap:16px;padding:14px 0;border-bottom:1px solid #f1f3f7}
+.version-item:last-child{border-bottom:none}
+.version-item .v-tag{width:44px;height:24px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0}
+.version-item .v-tag.current{background:#dcfce7;color:#16a34a}
+.version-item .v-tag.prev{background:#f1f3f7;color:#64748b}
+.version-item .v-date{font-size:11px;color:#94a3b8;margin-bottom:4px}
+.version-item .v-desc{font-size:13px}
+.version-item .v-result{font-size:12px;color:#4f46e5;font-weight:500;margin-top:4px}
+/* TEMPLATES */
+.tmpl-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.tmpl-card{background:#fff;border:1px solid #e8eaef;border-radius:12px;padding:20px}
+.tmpl-card .tmpl-cat{font-size:14px;font-weight:600;margin-bottom:6px}
+.tmpl-card .tmpl-desc{font-size:12px;color:#64748b;line-height:1.6}
+.tmpl-card .tmpl-use{margin-top:12px;font-size:12px;color:#4f46e5;font-weight:600;cursor:pointer}
+.tmpl-card .tmpl-use:hover{text-decoration:underline}
+@media(max-width:900px){.prompt-grid,.tmpl-grid,.transfer-grid{grid-template-columns:1fr 1fr}.judge-pipeline,.iter-loop{grid-template-columns:1fr}}
+@media(max-width:600px){.prompt-grid,.tmpl-grid,.transfer-grid{grid-template-columns:1fr}.detail-panel{width:100%}}
+</style>
+</head>
+<body>
+
+<nav class="top-nav">
+  <span class="brand">AIGC Product Optimization</span>
+  <a href="experiment-platform-en.html">Experiment Platform</a>
+  <a href="translation-platform-en.html">Translation Platform</a>
+  <a href="ai-title-strategy-en.html" class="active">AI Title Strategy Library</a>
+  <a href="ai-title-strategy.html" class="lang-switch">Switch to Chinese</a>
+</nav>
+
+<div class="agent-bar">
+  <span class="ab-label">Agent Pipeline</span>
+  <span class="ab-step current">Strategy Generation &amp; Iteration</span>
+  <span class="ab-arrow">&rarr;</span>
+  <a href="translation-platform-en.html" class="ab-step next" style="text-decoration:none">Translation Adaptation</a>
+  <span class="ab-arrow">&rarr;</span>
+  <a href="experiment-platform-en.html" class="ab-step next" style="text-decoration:none">Experiment Validation</a>
+  <span class="ab-arrow">&rarr;</span>
+  <span class="ab-step next">Results Feedback &rarr; Self-Iteration</span>
+</div>
+
+<div class="page">
+  <h1 class="page-title">AI Title Strategy Library</h1>
+  <p class="page-sub">LLM-as-Judge automated evaluation, Prompt self-evolution iteration, cross-country intelligent transfer</p>
+
+  <!-- WORKFLOW (UPDATED) -->
+  <h2 class="section-title">Prompt Tuning Workflow <span class="badge-agent">Agent Enhanced</span></h2>
+  <p class="section-sub">Purple steps are automatically executed by Agent; yellow steps are Agent suggestions + human confirmation</p>
+
+  <div class="workflow">
+    <div class="wf-step"><div class="wf-num">1</div><div class="wf-title">Requirement Analysis</div><div class="wf-desc">Category features<br>Market insights<br>Competitor analysis</div></div>
+    <div class="wf-arrow">&rarr;</div>
+    <div class="wf-step agent"><div class="wf-num">2</div><div class="wf-title">Prompt Generation</div><div class="wf-desc">Template-based<br>+ cross-country transfer<br>+ historical lesson injection</div></div>
+    <div class="wf-arrow">&rarr;</div>
+    <div class="wf-step agent"><div class="wf-num">3</div><div class="wf-title">LLM-as-Judge</div><div class="wf-desc">Automated batch generation<br>4-dimension auto-scoring<br>Replaces manual sampling</div></div>
+    <div class="wf-arrow">&rarr;</div>
+    <div class="wf-step loop"><div class="wf-num">4</div><div class="wf-title">Agent Iteration</div><div class="wf-desc">Identify problem dimensions<br>Generate modification suggestions<br>Human confirms</div></div>
+    <div class="wf-arrow">&rarr;</div>
+    <div class="wf-step"><div class="wf-num">5</div><div class="wf-title">AB Test</div><div class="wf-desc">Auto-create experiments<br>Smart traffic allocation<br>Bayesian monitoring</div></div>
+    <div class="wf-arrow">&rarr;</div>
+    <div class="wf-step agent"><div class="wf-num">6</div><div class="wf-title">Results Feedback</div><div class="wf-desc">Experiment conclusions auto-<br>written back to strategy library<br>Triggers transfer/iteration</div></div>
+  </div>
+
+  <!-- LLM-as-JUDGE -->
+  <h2 class="section-title">LLM-as-Judge Automated Evaluation <span class="badge-agent">Agent</span></h2>
+  <p class="section-sub">4-dimension automated scoring replaces manual sampling; evaluation throughput from 200 items/day to 50,000 items/minute</p>
+
+  <div class="card">
+    <div class="judge-pipeline">
+      <div class="judge-left">
+        <div class="judge-dim"><div class="jd-icon" style="background:#dbeafe;color:#2563eb">&#x1F4CB;</div><div><div class="jd-name">Information Completeness</div><div class="jd-desc">Whether core attributes are complete (category/material/size/color/style)</div></div><div class="jd-score">8.2</div></div>
+        <div class="judge-dim"><div class="jd-icon" style="background:#dcfce7;color:#16a34a">&#x1F4D6;</div><div><div class="jd-name">Readability</div><div class="jd-desc">Grammar naturalness, word order fluency, length compliance</div></div><div class="jd-score">7.8</div></div>
+        <div class="judge-dim"><div class="jd-icon" style="background:#fef3c7;color:#d97706">&#x2696;</div><div><div class="jd-name">Compliance</div><div class="jd-desc">No prohibited marketing terms, compliant with target market regulations</div></div><div class="jd-score">9.5</div></div>
+        <div class="judge-dim"><div class="jd-icon" style="background:#f3e8ff;color:#7c3aed">&#x1F50D;</div><div><div class="jd-name">Search Friendliness</div><div class="jd-desc">Keyword placement, search intent matching, long-tail keyword coverage</div></div><div class="jd-score">7.1</div></div>
+      </div>
+      <div class="judge-right">
+        <div class="jr-title">Evaluation Samples (US &middot; Apparel &middot; V4 Prompt Output)</div>
+        <div class="jr-sample">
+          <div class="jr-label">Input Attributes</div>
+          Category: Dress | Material: Polyester blend | Style: Korean | Season: Spring/Summer | Color: Navy | Size: S-XXL
+        </div>
+        <div class="jr-sample">
+          <div class="jr-label">Generated Title</div>
+          Korean Style A-Line Dress Breathable Poly Blend Navy Spring Summer S-XXL
+          <div class="jr-bar"><div class="jr-fill" style="width:88%;background:#22c55e"></div></div>
+          <small style="color:#16a34a;font-weight:600">Overall 8.8 &mdash; Complete information, excellent readability</small>
+        </div>
+        <div class="jr-sample">
+          <div class="jr-label">Generated Title</div>
+          Navy Korean Style Midi Dress for Spring Summer Lightweight Polyester Blend Available S to XXL
+          <div class="jr-bar"><div class="jr-fill" style="width:72%;background:#f59e0b"></div></div>
+          <small style="color:#d97706;font-weight:600">Overall 7.2 &mdash; Too long (92 chars), redundant "for" conjunction</small>
+        </div>
+        <div class="jr-sample">
+          <div class="jr-label">Generated Title</div>
+          Summer Dress Navy Blue Women Korean Fashion A Line Polyester S XXL
+          <div class="jr-bar"><div class="jr-fill" style="width:61%;background:#dc2626"></div></div>
+          <small style="color:#dc2626;font-weight:600">Overall 6.1 &mdash; Missing seasonal selling points like "breathable", unnatural word order</small>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PROMPT ITERATION FEEDBACK -->
+  <h2 class="section-title">Prompt Self-Iteration Feedback Loop <span class="badge-agent">Agent</span></h2>
+  <p class="section-sub">Agent compares scoring differences between versions, identifies problem dimensions, and generates modification suggestions</p>
+
+  <div class="card">
+    <div class="iter-loop">
+      <div class="iter-card">
+        <div class="ic-header"><div class="ic-dot" style="background:#22c55e"></div>US &middot; Apparel &middot; V3 &rarr; V4 Iteration Analysis</div>
+        <div class="ic-row"><span>Information Completeness</span><span style="margin-left:auto;font-weight:700">7.8 &rarr; 8.2</span><span class="ic-change improve">+0.4</span></div>
+        <div class="ic-row"><span>Readability</span><span style="margin-left:auto;font-weight:700">7.5 &rarr; 7.8</span><span class="ic-change improve">+0.3</span></div>
+        <div class="ic-row"><span>Compliance</span><span style="margin-left:auto;font-weight:700">9.3 &rarr; 9.5</span><span class="ic-change improve">+0.2</span></div>
+        <div class="ic-row"><span>Search Friendliness</span><span style="margin-left:auto;font-weight:700">6.8 &rarr; 7.1</span><span class="ic-change improve">+0.3</span></div>
+        <div style="margin-top:12px;padding:12px;background:#f0fdf4;border-radius:8px;font-size:12px;color:#166534;line-height:1.6">
+          <strong>Agent Diagnosis:</strong> V3 added a banned list for social media terms like "trending" and "viral", which simultaneously improved compliance and search friendliness. V4 shows no significant regression in any dimension.<br><strong>Recommendation:</strong> Current version has reached the point of diminishing returns (V3&rarr;V4 overall improvement only +0.3). Recommend stopping iteration and shifting to new categories.
+        </div>
+      </div>
+      <div class="iter-card">
+        <div class="ic-header"><div class="ic-dot" style="background:#f59e0b"></div>Germany &middot; Tools &middot; V1 &rarr; V2 Iteration Analysis</div>
+        <div class="ic-row"><span>Information Completeness</span><span style="margin-left:auto;font-weight:700">7.2 &rarr; 6.5</span><span class="ic-change regress">-0.7</span></div>
+        <div class="ic-row"><span>Readability</span><span style="margin-left:auto;font-weight:700">6.8 &rarr; 7.9</span><span class="ic-change improve">+1.1</span></div>
+        <div class="ic-row"><span>Compliance</span><span style="margin-left:auto;font-weight:700">8.5 &rarr; 8.8</span><span class="ic-change improve">+0.3</span></div>
+        <div class="ic-row"><span>Search Friendliness</span><span style="margin-left:auto;font-weight:700">6.2 &rarr; 6.8</span><span class="ic-change improve">+0.6</span></div>
+        <div style="margin-top:12px;padding:12px;background:#fef3c7;border-radius:8px;font-size:12px;color:#92400e;line-height:1.6">
+          <strong>Agent Diagnosis:</strong> V2 enforced German technical terms (Akkuschrauber replacing cordless drill), greatly improving readability but reducing information completeness &mdash; some German terms are too specialized, and buyers still search using English loanwords.<br><strong>Recommendation:</strong> V3 should add a "German technical term + English loanword coexistence" rule, e.g. "Akkuschrauber (Cordless Drill)".
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CROSS-COUNTRY TRANSFER -->
+  <h2 class="section-title">Cross-Country Prompt Intelligent Transfer <span class="badge-agent">Agent</span></h2>
+  <p class="section-sub">Automatically transfer strategies from validated markets to new markets, skipping V1 to V3 trial-and-error costs</p>
+
+  <div class="transfer-grid">
+    <div class="transfer-card">
+      <div class="tc-from-to"><span class="tc-flag">&#x1F1FA;&#x1F1F8;</span><span class="tc-arrow">&rarr;</span><span class="tc-flag">&#x1F1EC;&#x1F1E7;</span><span>US Apparel V4 &rarr; UK</span></div>
+      <span class="tc-status ready">Candidate Generated</span>
+      <div class="tc-desc">Auto-adapted: British spelling (colour/jewellery), UK sizing format, Autumn instead of Fall, resolved "trainers" ambiguity</div>
+      <div class="tc-similarity">Market similarity 87% &middot; Expected to skip V1-V2 iterations</div>
+    </div>
+    <div class="transfer-card">
+      <div class="tc-from-to"><span class="tc-flag">&#x1F1FA;&#x1F1F8;</span><span class="tc-arrow">&rarr;</span><span class="tc-flag">&#x1F1E9;&#x1F1EA;</span><span>US Tools V3 &rarr; DE</span></div>
+      <span class="tc-status tested">Validated</span>
+      <div class="tc-desc">Auto-adapted: metric units, German technical term mapping table, DIN/EN certification rules injected, 230V voltage</div>
+      <div class="tc-similarity">Market similarity 72% &middot; Experiment result GMV +5.1% (p&lt;0.01)</div>
+    </div>
+    <div class="transfer-card">
+      <div class="tc-from-to"><span class="tc-flag">&#x1F1FA;&#x1F1F8;</span><span class="tc-arrow">&rarr;</span><span class="tc-flag">&#x1F1EF;&#x1F1F5;</span><span>US Home V3 &rarr; JP</span></div>
+      <span class="tc-status pending">Pending Human Confirmation</span>
+      <div class="tc-desc">Auto-adapted: Japanese style terms (simple/natural), cm retained, compact design emphasis added, Japanese room context</div>
+      <div class="tc-similarity">Market similarity 58% &middot; Significant cultural differences, small-batch validation recommended</div>
+    </div>
+    <div class="transfer-card">
+      <div class="tc-from-to"><span class="tc-flag">&#x1F1FA;&#x1F1F8;</span><span class="tc-arrow">&rarr;</span><span class="tc-flag">&#x1F1EB;&#x1F1F7;</span><span>US Beauty V4 &rarr; FR</span></div>
+      <span class="tc-status ready">Candidate Generated</span>
+      <div class="tc-desc">Auto-adapted: French cosmetics claims compliance rules, volume ml notation, French skin-type terms, EU ingredient regulation checks</div>
+      <div class="tc-similarity">Market similarity 76% &middot; Compliance rule differences auto-flagged</div>
+    </div>
+    <div class="transfer-card">
+      <div class="tc-from-to"><span class="tc-flag">&#x1F1E9;&#x1F1EA;</span><span class="tc-arrow">&rarr;</span><span class="tc-flag">&#x1F1F0;&#x1F1F7;</span><span>DE Tools V2 &rarr; KR</span></div>
+      <span class="tc-status pending">Pending Human Confirmation</span>
+      <div class="tc-desc">Auto-adapted: 220V/60Hz Korean standard, KS certification, Korean technical term mapping, metric retained</div>
+      <div class="tc-similarity">Market similarity 61% &middot; Voltage difference auto-corrected</div>
+    </div>
+    <div class="transfer-card">
+      <div class="tc-from-to"><span class="tc-flag">&#x1F1FA;&#x1F1F8;</span><span class="tc-arrow">&rarr;</span><span class="tc-flag">&#x1F1F8;&#x1F1E6;</span><span>US Apparel V4 &rarr; SA</span></div>
+      <span class="tc-status pending">Pending Human Confirmation</span>
+      <div class="tc-desc">Auto-adapted: modest fashion keyword injection, desert climate fabric emphasis (breathable/lightweight), cultural sensitivity review</div>
+      <div class="tc-similarity">Market similarity 45% &middot; Major cultural differences, small-batch validation strongly recommended</div>
+    </div>
+  </div>
+
+  <!-- COUNTRY x CATEGORY MATRIX -->
+  <h2 class="section-title" style="margin-top:40px">Country &times; Category Prompt Matrix</h2>
+  <p class="section-sub">Select a target country to view accumulated Prompt strategies; scores from LLM-as-Judge automated evaluation</p>
+
+  <div class="country-bar" id="countryBar">
+    <div class="country-chip active" data-ctry="US">&#x1F1FA;&#x1F1F8; United States</div>
+    <div class="country-chip" data-ctry="UK">&#x1F1EC;&#x1F1E7; United Kingdom</div>
+    <div class="country-chip" data-ctry="DE">&#x1F1E9;&#x1F1EA; Germany</div>
+    <div class="country-chip" data-ctry="FR">&#x1F1EB;&#x1F1F7; France</div>
+    <div class="country-chip" data-ctry="JP">&#x1F1EF;&#x1F1F5; Japan</div>
+    <div class="country-chip" data-ctry="ES">&#x1F1EA;&#x1F1F8; Spain</div>
+  </div>
+  <div class="prompt-grid" id="promptGrid"></div>
+
+  <!-- TEMPLATES -->
+  <h2 class="section-title" style="margin-top:40px">Prompt Base Templates</h2>
+  <p class="section-sub">Starting Prompt templates for each category; Agent auto-selects the corresponding template and injects target market rules during transfer</p>
+
+  <div class="tmpl-grid">
+    <div class="tmpl-card"><div class="tmpl-cat">&#x1F457; Apparel</div><div class="tmpl-desc">Emphasize material, fit, use case, seasonal attributes; lead with core category keyword; ban marketing words; control 80-120 character length</div><div class="tmpl-use">+ Agent auto-adapts to new markets</div></div>
+    <div class="tmpl-card"><div class="tmpl-cat">&#x1F527; Tools</div><div class="tmpl-desc">Highlight specifications, applicable materials, package contents; adapt units to target market (metric/imperial); ban vague descriptions</div><div class="tmpl-use">+ Agent auto-adapts to new markets</div></div>
+    <div class="tmpl-card"><div class="tmpl-cat">&#x1F3E0; Home</div><div class="tmpl-desc">Focus on style, material, dimensions, applicable space; use standard color names; include installation method keywords</div><div class="tmpl-use">+ Agent auto-adapts to new markets</div></div>
+    <div class="tmpl-card"><div class="tmpl-cat">&#x1F484; Beauty</div><div class="tmpl-desc">Efficacy keywords, skin type, core ingredients; volume/shade required; comply with cosmetics regulations per country</div><div class="tmpl-use">+ Agent auto-adapts to new markets</div></div>
+    <div class="tmpl-card"><div class="tmpl-cat">&#x1F4F1; 3C Electronics</div><div class="tmpl-desc">Brand + model + core specs + compatibility; ban parameter exaggeration; adapt to target market certification marks</div><div class="tmpl-use">+ Agent auto-adapts to new markets</div></div>
+    <div class="tmpl-card"><div class="tmpl-cat">&#x1F43E; Pets</div><div class="tmpl-desc">Applicable pet species + body size + age range; material safety; capacity/weight; highlight functional differentiators</div><div class="tmpl-use">+ Agent auto-adapts to new markets</div></div>
+  </div>
+</div>
+
+<!-- DETAIL PANEL -->
+<div class="detail-overlay" id="overlay" onclick="closeDetail()"></div>
+<div class="detail-panel" id="detailPanel">
+  <button class="close-btn" onclick="closeDetail()">&#x2715;</button>
+  <h3 id="dpTitle"></h3>
+  <p class="dp-meta" id="dpMeta"></p>
+  <div class="detail-section"><h4>Current Prompt</h4><div class="prompt-block" id="dpPrompt"></div></div>
+  <div class="detail-section"><h4>LLM-as-Judge Score Trend</h4>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px" id="dpScores"></div>
+  </div>
+  <div class="detail-section"><h4>Version Iteration History</h4><ul class="version-list" id="dpVersions"></ul></div>
+</div>
+
+<script>
+const promptData={
+  US:[
+    {cat:'Apparel',dot:'#818cf8',preview:'You are a senior e-commerce copywriter for the US market. Generate a product title for a women\'s dress. Rules: 1) Start with core category. 2) Include material, style, season. 3) 80-120 chars.',version:'V4',judgeScore:'8.6',date:'2024.06.15',
+     prompt:'You are a senior e-commerce copywriter specializing in the US fashion market.\n\nTask: Generate a product title for the following item.\n\nRules:\n1. Start with the core category keyword\n2. Include: material, style/fit, season, key design feature\n3. Length: 80\u2013120 characters\n4. Forbidden: hot, new, best, sale, cheap, trending, viral\n5. American English spelling\n6. Colors: standard names (navy, burgundy, sage)\n\nInput: {product_attributes}\nOutput: [Generated Title]',
+     scores:{info:'8.2',read:'7.8',comp:'9.5',search:'7.1'},
+     versions:[
+       {tag:'V4',cls:'current',date:'2024.06.15',desc:'Agent suggestion: add negative constraints for social media terms like "trending" and "viral"',result:'Judge 8.6 (+0.3) | ABTest CTR +5.2%, GMV +7.1%'},
+       {tag:'V3',cls:'prev',date:'2024.05.28',desc:'Agent suggestion: relax length limit 60-100 \u2192 80-120',result:'Judge 8.3 (+0.5) | CTR +4.1%'},
+       {tag:'V2',cls:'prev',date:'2024.05.10',desc:'Manual: add required seasonal attributes, increase few-shot examples 1\u21923',result:'Judge 7.8 (+0.8) | CTR +2.8%'},
+       {tag:'V1',cls:'prev',date:'2024.04.22',desc:'Initial version (auto-generated from template)',result:'Judge 7.0 | CTR +1.5% (not significant)'},
+     ]},
+    {cat:'Tools',dot:'#f59e0b',preview:'Technical product copywriter for US tools. Brand+Model+Spec format. Imperial units. Top 3 specs by buyer importance.',version:'V3',judgeScore:'8.1',date:'2024.06.08',
+     prompt:'Technical copywriter for US hardware/tools.\n\n1. Format: [Brand] [Model] [Core Spec] [Use Case]\n2. Include: voltage/power, key dimension (imperial), weight\n3. Top 3 specs by buyer importance\n4. Length: 100\u2013150 characters\n5. No vague words\n\nInput: {product_attributes}\nOutput: [Generated Title]',
+     scores:{info:'8.5',read:'7.4',comp:'9.0',search:'7.5'},
+     versions:[
+       {tag:'V3',cls:'current',date:'2024.06.08',desc:'Agent suggestion: add mandatory imperial unit conversion rule',result:'Judge 8.1 (+0.4) | CTR +3.8%'},
+       {tag:'V2',cls:'prev',date:'2024.05.15',desc:'Agent suggestion: sort specs by buyer importance',result:'Judge 7.7 (+0.6) | CTR +2.1%'},
+       {tag:'V1',cls:'prev',date:'2024.04.30',desc:'Initial version',result:'Judge 7.1 | CTR +0.9%'},
+     ]},
+    {cat:'Home',dot:'#10b981',preview:'Interior design-aware copywriter for US home. Style keyword first. Material+color+room context. Easy Assembly keyword.',version:'V3',judgeScore:'8.8',date:'2024.06.18',
+     prompt:'Interior design copywriter for US home d\u00e9cor.\n\n1. Start with style (Modern, Mid-Century, Farmhouse)\n2. Include: material, color, dimension (inches)\n3. Room context (Living Room, Bedroom)\n4. Assembly info keyword\n5. Length: 90\u2013140 characters\n\nInput: {product_attributes}\nOutput: [Generated Title]',
+     scores:{info:'8.9',read:'8.2',comp:'9.6',search:'8.4'},
+     versions:[
+       {tag:'V3',cls:'current',date:'2024.06.18',desc:'Agent suggestion: add assembly method rule (Easy Assembly)',result:'Judge 8.8 (+0.5) | CTR +6.1%, GMV +8.3%'},
+       {tag:'V2',cls:'prev',date:'2024.05.22',desc:'Agent suggestion: front-load style keywords + add room context terms',result:'Judge 8.3 (+1.0) | CTR +4.2%'},
+       {tag:'V1',cls:'prev',date:'2024.05.01',desc:'Initial version',result:'Judge 7.3 | CTR +1.8%'},
+     ]},
+  ],
+  UK:[
+    {cat:'Apparel',dot:'#818cf8',preview:'UK fashion. British English (colour, jewellery, trainers). UK sizing. Autumn not Fall.',version:'V2',judgeScore:'7.9',date:'2024.06.01',
+     prompt:'UK fashion e-commerce copywriter.\n\n1. British English: colour, jewellery, cosy, trainers\n2. UK sizing (UK 8, UK 10)\n3. "Autumn" not "Fall"\n4. Include: category, material, fit, occasion\n5. Length: 80\u2013120 chars\n\nInput: {product_attributes}\nOutput: [Generated Title]',
+     scores:{info:'7.8',read:'8.0',comp:'8.5',search:'7.3'},
+     versions:[
+       {tag:'V2',cls:'current',date:'2024.06.01',desc:'Agent transferred from US V4 + British English adaptation',result:'Judge 7.9 (+1.2) | CTR +3.4%'},
+       {tag:'V1',cls:'prev',date:'2024.05.08',desc:'Initial version (directly reused US template)',result:'Judge 6.7 | CTR +0.6%'},
+     ]},
+    {cat:'Tools',dot:'#f59e0b',preview:'UK tools. Metric units. BS/EN certification. 230V standard.',version:'V1',judgeScore:'7.5',date:'2024.05.20',
+     prompt:'UK tools market copywriter.\n1. Metric primary\n2. 230V UK standard\n3. BS/EN certification\n4. Length: 100\u2013140 chars\n\nInput: {product_attributes}\nOutput: [Generated Title]',
+     scores:{info:'7.6',read:'7.2',comp:'8.0',search:'7.2'},
+     versions:[{tag:'V1',cls:'current',date:'2024.05.20',desc:'Agent transferred from US V3 + metric + BS standard adaptation',result:'Judge 7.5 | CTR +2.2%'}]},
+    {cat:'Home',dot:'#10b981',preview:'UK home. Country Cottage, Victorian style. Metric cm. British colour spelling.',version:'V2',judgeScore:'8.0',date:'2024.06.12',
+     prompt:'UK home d\u00e9cor copywriter.\n1. Styles: Country Cottage, Victorian, Contemporary\n2. Dimensions cm\n3. British colour spelling\n4. Room context\n5. Length: 90\u2013130 chars\n\nInput: {product_attributes}\nOutput: [Generated Title]',
+     scores:{info:'8.0',read:'7.8',comp:'8.5',search:'7.7'},
+     versions:[
+       {tag:'V2',cls:'current',date:'2024.06.12',desc:'Agent suggestion: add UK-specific style terms',result:'Judge 8.0 (+0.7)'},
+       {tag:'V1',cls:'prev',date:'2024.05.28',desc:'Initial version',result:'Judge 7.3'},
+     ]},
+  ],
+  DE:[
+    {cat:'Apparel',dot:'#818cf8',preview:'German fashion. Compound nouns. EU sizing. Gender-specific articles.',version:'V2',judgeScore:'7.8',date:'2024.05.25',
+     prompt:'Deutscher Mode-Texter.\n1. Deutsche Komposita\n2. EU-Gr\u00f6\u00dfen (Gr. 38)\n3. Material (deutsch)\n4. L\u00e4nge: 80\u2013130 Zeichen\n\nInput: {product_attributes}\nOutput: [Generierter Titel]',
+     scores:{info:'7.7',read:'8.0',comp:'8.2',search:'7.3'},
+     versions:[
+       {tag:'V2',cls:'current',date:'2024.05.25',desc:'Agent transferred from US V4 + German compound noun rules',result:'Judge 7.8 | CTR +4.0%'},
+       {tag:'V1',cls:'prev',date:'2024.04.28',desc:'Initial version',result:'Judge 6.9'},
+     ]},
+    {cat:'Tools',dot:'#f59e0b',preview:'German tools. DIN/EN norms. German technical terms (Akkuschrauber). Metric. 230V.',version:'V2',judgeScore:'8.3',date:'2024.06.05',
+     prompt:'Technischer Texter \u2014 deutscher Werkzeugmarkt.\n1. Metric (cm, kg, Watt)\n2. DIN/EN norms\n3. 230V\n4. German technical terms\n5. L\u00e4nge: 100\u2013150 Zeichen\n\nInput: {product_attributes}\nOutput: [Generierter Titel]',
+     scores:{info:'8.0',read:'8.5',comp:'8.8',search:'7.9'},
+     versions:[
+       {tag:'V2',cls:'current',date:'2024.06.05',desc:'Agent suggestion: enforce German terms over English loanwords',result:'Judge 8.3 (+1.2) | CTR +5.1%'},
+       {tag:'V1',cls:'prev',date:'2024.05.12',desc:'Agent transferred from US V3',result:'Judge 7.1'},
+     ]},
+    {cat:'Home',dot:'#10b981',preview:'German home. Bauhaus/Scandi. Metric. German material names (Eiche/Buche).',version:'V1',judgeScore:'7.4',date:'2024.06.10',
+     prompt:'Deutscher Wohndeko-Texter.\n1. Bauhaus, Skandinavisch, Landhaus\n2. Metric cm\n3. Eiche, Buche, Kiefer\n4. Wohnzimmer, Schlafzimmer\n5. 90\u2013140 Zeichen\n\nInput: {product_attributes}\nOutput: [Generierter Titel]',
+     scores:{info:'7.5',read:'7.2',comp:'8.0',search:'6.9'},
+     versions:[{tag:'V1',cls:'current',date:'2024.06.10',desc:'Agent transferred from US V3 + German material mapping',result:'Judge 7.4 | Pending experiment'}]},
+  ],
+  FR:[
+    {cat:'Apparel',dot:'#818cf8',preview:'French fashion. Gendered adjectives. EU sizing (T.38). Season: printemps/\u00e9t\u00e9.',version:'V2',judgeScore:'7.6',date:'2024.06.11',
+     prompt:'R\u00e9dacteur mode FR.\n1. Accord genre/nombre\n2. T.38, T.40\n3. printemps/\u00e9t\u00e9, automne/hiver\n4. 80\u2013120 caract\u00e8res\n\nInput: {product_attributes}\nOutput: [Titre]',
+     scores:{info:'7.5',read:'7.8',comp:'8.0',search:'7.1'},
+     versions:[
+       {tag:'V2',cls:'current',date:'2024.06.11',desc:'Agent suggestion: add adjective gender agreement rule',result:'Judge 7.6 (+0.8) | CTR +3.6%'},
+       {tag:'V1',cls:'prev',date:'2024.05.18',desc:'Agent transferred from US V4',result:'Judge 6.8'},
+     ]},
+    {cat:'Tools',dot:'#f59e0b',preview:'French tools. NF/CE cert. French terms: perceuse, meuleuse. Metric 230V.',version:'V1',judgeScore:'7.2',date:'2024.06.02',
+     prompt:'R\u00e9dacteur technique FR.\n1. M\u00e9trique\n2. NF/CE\n3. perceuse, meuleuse, ponceuse\n4. 100\u2013140 chars\n\nInput: {product_attributes}\nOutput: [Titre]',
+     scores:{info:'7.3',read:'7.0',comp:'7.8',search:'6.7'},
+     versions:[{tag:'V1',cls:'current',date:'2024.06.02',desc:'Agent transferred from DE V2 + French term mapping',result:'Judge 7.2 | Pending experiment'}]},
+    {cat:'Home',dot:'#10b981',preview:'French home. Parisien/Haussmannien. French materials (ch\u00eane, h\u00eatre, lin). Metric.',version:'V1',judgeScore:'7.3',date:'2024.06.14',
+     prompt:'R\u00e9dacteur d\u00e9co FR.\n1. Parisien, Haussmannien, Scandinave\n2. ch\u00eane, h\u00eatre, lin\n3. salon, chambre\n4. cm\n5. 90\u2013130 chars\n\nInput: {product_attributes}\nOutput: [Titre]',
+     scores:{info:'7.4',read:'7.1',comp:'7.8',search:'6.9'},
+     versions:[{tag:'V1',cls:'current',date:'2024.06.14',desc:'Agent transferred from US V3 + French style vocabulary',result:'Judge 7.3 | Pending experiment'}]},
+  ],
+  JP:[
+    {cat:'Apparel',dot:'#818cf8',preview:'Japanese fashion. Katakana materials. Size S/M/L+cm. 40\u201360 characters. Spring/Summer & Autumn/Winter seasons.',version:'V3',judgeScore:'8.4',date:'2024.06.16',
+     prompt:'\u65E5\u672C\u30D5\u30A1\u30C3\u30B7\u30E7\u30F3EC\u30B3\u30D4\u30FC\u30E9\u30A4\u30BF\u30FC\u3002\n1. \u30B5\u30A4\u30BA: S/M/L + cm\n2. \u30AB\u30BF\u30AB\u30CA\u7D20\u6750\n3. \u6625\u590F/\u79CB\u51AC\n4. 40\u301C60\u6587\u5B57\n5. \u7981\u6B62: \u7206\u6B3E/\u4EBA\u6C17\n\nInput: {product_attributes}\nOutput: [\u30BF\u30A4\u30C8\u30EB]',
+     scores:{info:'8.3',read:'8.6',comp:'8.8',search:'7.9'},
+     versions:[
+       {tag:'V3',cls:'current',date:'2024.06.16',desc:'Agent suggestion: reduce char limit 80\u219260, enforce Katakana materials',result:'Judge 8.4 (+0.9) | CTR +6.1%'},
+       {tag:'V2',cls:'prev',date:'2024.05.30',desc:'Agent suggestion: make seasonal keywords mandatory',result:'Judge 7.5 (+0.8)'},
+       {tag:'V1',cls:'prev',date:'2024.05.05',desc:'Initial version',result:'Judge 6.7'},
+     ]},
+    {cat:'Tools',dot:'#f59e0b',preview:'Japanese tools. JIS standards. 100V. Katakana technical terms. Metric.',version:'V1',judgeScore:'7.3',date:'2024.06.04',
+     prompt:'\u65E5\u672C\u5DE5\u5177\u30C6\u30AF\u30CB\u30AB\u30EB\u30E9\u30A4\u30BF\u30FC\u3002\n1. JIS\u898F\u683C\n2. 100V\n3. \u30AB\u30BF\u30AB\u30CA\u7528\u8A9E\n4. 50\u301C80\u6587\u5B57\n\nInput: {product_attributes}\nOutput: [\u30BF\u30A4\u30C8\u30EB]',
+     scores:{info:'7.4',read:'7.1',comp:'7.8',search:'6.9'},
+     versions:[{tag:'V1',cls:'current',date:'2024.06.04',desc:'Agent transferred from US V3 + JIS adaptation',result:'Judge 7.3 | Pending experiment'}]},
+    {cat:'Home',dot:'#10b981',preview:'Japanese home. Simple/Natural/Japanese Modern. Compact design emphasis. Metric cm.',version:'V2',judgeScore:'8.1',date:'2024.06.20',
+     prompt:'\u65E5\u672C\u30A4\u30F3\u30C6\u30EA\u30A2EC\u30B3\u30D4\u30FC\u30E9\u30A4\u30BF\u30FC\u3002\n1. \u30B7\u30F3\u30D7\u30EB/\u30CA\u30C1\u30E5\u30E9\u30EB/\u548C\u30E2\u30C0\u30F3/\u5317\u6B27\n2. \u30B3\u30F3\u30D1\u30AF\u30C8\u8A2D\u8A08\u5F37\u8ABF\n3. \u5929\u7136\u6728/\u7AF9/\u548C\u7D19\n4. cm\n5. 45\u301C70\u6587\u5B57\n\nInput: {product_attributes}\nOutput: [\u30BF\u30A4\u30C8\u30EB]',
+     scores:{info:'8.0',read:'8.3',comp:'8.5',search:'7.6'},
+     versions:[
+       {tag:'V2',cls:'current',date:'2024.06.20',desc:'Agent suggestion: add compact design emphasis',result:'Judge 8.1 (+1.0) | CTR +4.5%'},
+       {tag:'V1',cls:'prev',date:'2024.05.22',desc:'Agent transferred from US V3 + Japanese style vocabulary',result:'Judge 7.1'},
+     ]},
+  ],
+  ES:[
+    {cat:'Apparel',dot:'#818cf8',preview:'Spanish fashion. Gendered nouns. EU sizing. Temporada keywords.',version:'V1',judgeScore:'7.1',date:'2024.06.08',
+     prompt:'Redactor moda ES.\n1. Concordancia g\u00e9nero\n2. T.38, T.40\n3. primavera/verano\n4. 80\u2013120 chars\n\nInput: {product_attributes}\nOutput: [T\u00edtulo]',
+     scores:{info:'7.2',read:'7.0',comp:'7.5',search:'6.7'},
+     versions:[{tag:'V1',cls:'current',date:'2024.06.08',desc:'Agent transferred from US V4 + Spanish adaptation',result:'Judge 7.1 | Pending experiment'}]},
+    {cat:'Tools',dot:'#f59e0b',preview:'Spanish tools. Metric 230V. taladro, amoladora, lijadora.',version:'V1',judgeScore:'7.0',date:'2024.06.01',
+     prompt:'Redactor t\u00e9cnico ES.\n1. M\u00e9trico\n2. 230V\n3. taladro, amoladora\n4. 100\u2013140 chars\n\nInput: {product_attributes}\nOutput: [T\u00edtulo]',
+     scores:{info:'7.1',read:'6.8',comp:'7.5',search:'6.6'},
+     versions:[{tag:'V1',cls:'current',date:'2024.06.01',desc:'Agent transferred from DE V2 + Spanish term mapping',result:'Judge 7.0 | Pending experiment'}]},
+    {cat:'Home',dot:'#10b981',preview:'Spanish home. Mediterranean/rustic style. Metric. Spanish room names.',version:'V1',judgeScore:'7.2',date:'2024.06.12',
+     prompt:'Redactor decoraci\u00f3n ES.\n1. mediterr\u00e1neo, r\u00fastico, moderno\n2. M\u00e9trico cm\n3. sal\u00f3n, dormitorio\n4. 90\u2013130 chars\n\nInput: {product_attributes}\nOutput: [T\u00edtulo]',
+     scores:{info:'7.3',read:'7.0',comp:'7.6',search:'6.9'},
+     versions:[{tag:'V1',cls:'current',date:'2024.06.12',desc:'Agent transferred from US V3 + Spanish style vocabulary',result:'Judge 7.2 | Pending experiment'}]},
+  ]
+};
+
+function renderGrid(ctry){
+  const grid=document.getElementById('promptGrid');grid.innerHTML='';
+  const items=promptData[ctry]||[];
+  items.forEach((item,i)=>{
+    const card=document.createElement('div');card.className='prompt-card';
+    card.innerHTML=`<div class="cat"><span class="dot" style="background:${item.dot}"></span>${item.cat}</div><div class="preview">${item.preview}</div><div class="meta-row"><span class="version">${item.version}</span><span class="judge-score">Judge ${item.judgeScore}</span><span style="color:#94a3b8">${item.date}</span></div>`;
+    card.onclick=()=>openDetail(ctry,i);grid.appendChild(card);
+  });
+}
+document.querySelectorAll('.country-chip').forEach(c=>{c.addEventListener('click',()=>{document.querySelectorAll('.country-chip').forEach(x=>x.classList.remove('active'));c.classList.add('active');renderGrid(c.dataset.ctry)})});
+renderGrid('US');
+
+function openDetail(ctry,i){
+  const item=promptData[ctry][i];
+  const ctryName={US:'United States',UK:'United Kingdom',DE:'Germany',FR:'France',JP:'Japan',ES:'Spain'}[ctry];
+  document.getElementById('dpTitle').textContent=`${ctryName} \u00b7 ${item.cat} Prompt`;
+  document.getElementById('dpMeta').textContent=`Version ${item.version} | Last updated ${item.date} | Judge score ${item.judgeScore}`;
+  document.getElementById('dpPrompt').textContent=item.prompt;
+  const scoresEl=document.getElementById('dpScores');scoresEl.innerHTML='';
+  const dims=[{name:'Info Completeness',key:'info',color:'#2563eb',bg:'#dbeafe'},{name:'Readability',key:'read',color:'#16a34a',bg:'#dcfce7'},{name:'Compliance',key:'comp',color:'#d97706',bg:'#fef3c7'},{name:'Search Friendliness',key:'search',color:'#7c3aed',bg:'#f3e8ff'}];
+  dims.forEach(d=>{const v=item.scores[d.key];scoresEl.innerHTML+=`<div style="background:${d.bg};border-radius:10px;padding:14px;text-align:center"><div style="font-size:10px;font-weight:600;color:${d.color};text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px">${d.name}</div><div style="font-size:24px;font-weight:700">${v}</div></div>`});
+  const vList=document.getElementById('dpVersions');vList.innerHTML='';
+  item.versions.forEach(v=>{const li=document.createElement('li');li.className='version-item';li.innerHTML=`<span class="v-tag ${v.cls}">${v.tag}</span><div><div class="v-date">${v.date}</div><div class="v-desc">${v.desc}</div><div class="v-result">${v.result}</div></div>`;vList.appendChild(li)});
+  document.getElementById('overlay').style.display='block';document.getElementById('detailPanel').classList.add('open');
+}
+function closeDetail(){document.getElementById('overlay').style.display='none';document.getElementById('detailPanel').classList.remove('open')}
+</script>
+</body>
+</html>

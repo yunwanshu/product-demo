@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Translation Platform — AIGC Product Optimization</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f5f6fa;color:#1a1a2e;line-height:1.6}
+.top-nav{background:#fff;border-bottom:1px solid #e2e4e9;display:flex;align-items:center;padding:0 32px;height:56px;position:sticky;top:0;z-index:100}
+.top-nav .brand{font-size:15px;font-weight:700;color:#4f46e5;margin-right:40px;letter-spacing:-.3px}
+.top-nav a{text-decoration:none;color:#64748b;font-size:14px;font-weight:500;padding:16px 16px;border-bottom:2px solid transparent;transition:.2s}
+.top-nav a:hover{color:#4f46e5}.top-nav a.active{color:#4f46e5;border-bottom-color:#4f46e5}
+.lang-switch{margin-left:auto;text-decoration:none;font-size:12px;font-weight:600;color:#4f46e5;background:#eef2ff;padding:6px 14px;border-radius:16px;border:1px solid #c7d2fe;transition:.2s;white-space:nowrap}
+.lang-switch:hover{background:#4f46e5;color:#fff}
+.agent-bar{background:linear-gradient(90deg,#4f46e5,#6366f1);padding:10px 32px;display:flex;align-items:center;gap:12px;overflow-x:auto}
+.agent-bar .ab-label{color:rgba(255,255,255,.7);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap}
+.agent-bar .ab-step{display:flex;align-items:center;gap:6px;padding:5px 14px;border-radius:16px;font-size:12px;font-weight:600;white-space:nowrap;cursor:pointer;transition:.2s}
+.agent-bar .ab-step.current{background:rgba(255,255,255,.2);color:#fff}
+.agent-bar .ab-step.done{background:rgba(255,255,255,.1);color:rgba(255,255,255,.6)}
+.agent-bar .ab-step.next{background:transparent;color:rgba(255,255,255,.35);border:1px dashed rgba(255,255,255,.25)}
+.agent-bar .ab-arrow{color:rgba(255,255,255,.3);font-size:14px}
+.page{max-width:1240px;margin:0 auto;padding:24px 32px 60px}
+.page-title{font-size:22px;font-weight:700;margin-bottom:4px}
+.page-sub{font-size:13px;color:#94a3b8;margin-bottom:24px}
+.section-title{font-size:16px;font-weight:700;margin-bottom:4px;margin-top:36px;display:flex;align-items:center;gap:8px}
+.section-title .badge-agent{font-size:10px;font-weight:700;background:#eef2ff;color:#4f46e5;padding:3px 10px;border-radius:10px;text-transform:uppercase;letter-spacing:.4px}
+.section-sub{font-size:13px;color:#94a3b8;margin-bottom:18px}
+.card{background:#fff;border-radius:12px;border:1px solid #e8eaef;padding:24px;margin-bottom:20px}
+.card h3{font-size:15px;font-weight:600;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.card h3 .icon{width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px}
+/* TABS */
+.mode-tabs{display:flex;gap:0;margin-bottom:24px;border-bottom:2px solid #e2e4e9}
+.mode-tab{padding:12px 24px;font-size:14px;font-weight:600;color:#94a3b8;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;transition:.2s;user-select:none}
+.mode-tab:hover{color:#4f46e5}.mode-tab.active{color:#4f46e5;border-bottom-color:#4f46e5}
+.tab-content{display:none}.tab-content.active{display:block}
+/* FLOW */
+.flow{display:flex;align-items:center;gap:0;overflow-x:auto;padding:8px 0}
+.flow-step{background:#f8f9fc;border:1px solid #e2e4e9;border-radius:10px;padding:14px 16px;font-size:13px;font-weight:500;text-align:center;min-width:120px;flex-shrink:0}
+.flow-step .step-label{font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;font-weight:600}
+.flow-step.highlight{background:#eef2ff;border-color:#c7d2fe;color:#4338ca}
+.flow-arrow{color:#cbd5e1;font-size:18px;padding:0 5px;flex-shrink:0}
+/* RULES TABLE */
+.rule-tbl{width:100%;border-collapse:collapse}
+.rule-tbl th{text-align:left;font-size:11px;color:#94a3b8;font-weight:600;text-transform:uppercase;letter-spacing:.5px;padding:8px 12px;border-bottom:1px solid #e8eaef}
+.rule-tbl td{padding:10px 12px;font-size:13px;border-bottom:1px solid #f1f3f7}
+.rule-tbl tr:last-child td{border-bottom:none}
+.rule-tbl .arrow-cell{color:#4f46e5;font-weight:700;text-align:center;width:40px}
+.rule-tbl code{background:#f0fdf4;padding:2px 8px;border-radius:4px;font-size:12px;color:#166534}
+.rule-tbl code.to{background:#eef2ff;color:#4338ca}
+.rule-tbl .source-tag{font-size:10px;font-weight:600;padding:2px 8px;border-radius:8px}
+.rule-tbl .source-tag.auto{background:#fef3c7;color:#d97706}
+.rule-tbl .source-tag.manual{background:#f1f3f7;color:#64748b}
+/* COMPARE */
+.compare-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px}
+.compare-box{border-radius:10px;padding:18px 20px}
+.compare-box.before{background:#fef2f2;border:1px solid #fecaca}
+.compare-box.after{background:#f0fdf4;border:1px solid #bbf7d0}
+.compare-box .tag{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
+.compare-box.before .tag{color:#dc2626}.compare-box.after .tag{color:#16a34a}
+.compare-box .title-text{font-size:14px;line-height:1.7}
+.compare-box .score{margin-top:10px;font-size:12px;font-weight:600;color:#64748b}
+/* SMART ROUTING */
+.router-flow{display:flex;align-items:center;gap:0;justify-content:center;flex-wrap:wrap;padding:12px 0}
+.router-node{border-radius:12px;padding:14px 20px;text-align:center;font-size:13px;font-weight:500;min-width:110px}
+.router-node.input{background:#f8f9fc;border:1px solid #e2e4e9}
+.router-node.decision{background:#fef3c7;border:1px solid #fcd34d;transform:rotate(0deg);clip-path:polygon(50% 0%,100% 50%,50% 100%,0% 50%);padding:30px 36px;font-size:11px;font-weight:700}
+.router-node.pre{background:#dbeafe;border:1px solid #93c5fd}
+.router-node.post{background:#f3e8ff;border:1px solid #c4b5fd}
+.router-node.output{background:#dcfce7;border:1px solid #86efac}
+.router-arrow{color:#cbd5e1;font-size:16px;padding:0 6px}
+.router-branch{display:flex;flex-direction:column;gap:12px;align-items:center}
+/* AGENT SUGGEST */
+.agent-suggest{background:linear-gradient(135deg,#eef2ff,#fefce8);border:1px solid #c7d2fe;border-radius:12px;padding:20px 24px;margin-bottom:20px}
+.agent-suggest .as-header{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.agent-suggest .as-header .as-dot{width:8px;height:8px;border-radius:50%;background:#22c55e;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.agent-suggest .as-header span{font-size:12px;font-weight:700;color:#4f46e5;text-transform:uppercase;letter-spacing:.4px}
+.agent-suggest .as-item{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid rgba(99,102,241,.1);font-size:13px}
+.agent-suggest .as-item:last-child{border-bottom:none}
+.agent-suggest .as-num{width:22px;height:22px;border-radius:50%;background:#f59e0b;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.agent-suggest .as-action{font-size:11px;color:#4f46e5;font-weight:600;cursor:pointer;margin-top:4px}
+/* HEATMAP */
+.heatmap-wrap{overflow-x:auto}
+.heatmap{border-collapse:collapse;min-width:100%}
+.heatmap th{font-size:11px;color:#94a3b8;font-weight:600;padding:8px 10px;text-align:center}
+.heatmap td{padding:0;text-align:center;position:relative}
+.heatmap .cell{width:100%;height:40px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;border-radius:4px;margin:2px}
+/* FUNNEL */
+.funnel{display:flex;gap:12px;align-items:stretch}
+.funnel-step{flex:1;background:#fff;border:1px solid #e8eaef;border-radius:12px;padding:18px;text-align:center}
+.funnel-step .f-icon{font-size:22px;margin-bottom:6px}
+.funnel-step .f-label{font-size:11px;color:#94a3b8;font-weight:600;text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px}
+.funnel-step .f-value{font-size:24px;font-weight:700}
+.funnel-step .f-desc{font-size:12px;color:#64748b;margin-top:4px}
+.funnel-arrow{display:flex;align-items:center;color:#cbd5e1;font-size:20px;flex-shrink:0}
+@media(max-width:768px){.compare-row{grid-template-columns:1fr}.funnel{flex-direction:column}.funnel-arrow{justify-content:center;transform:rotate(90deg)}}
+</style>
+</head>
+<body>
+
+<nav class="top-nav">
+  <span class="brand">AIGC Product Optimization</span>
+  <a href="experiment-platform-en.html">Experiment Platform</a>
+  <a href="translation-platform-en.html" class="active">Translation Platform</a>
+  <a href="ai-title-strategy-en.html">AI Title Strategy Library</a>
+  <a href="translation-platform.html" class="lang-switch">Switch to Chinese</a>
+</nav>
+
+<div class="agent-bar">
+  <span class="ab-label">Agent Pipeline</span>
+  <a href="ai-title-strategy-en.html" class="ab-step done" style="text-decoration:none">Strategy Generation</a>
+  <span class="ab-arrow">&rarr;</span>
+  <span class="ab-step current">Translation Adaptation</span>
+  <span class="ab-arrow">&rarr;</span>
+  <a href="experiment-platform-en.html" class="ab-step next" style="text-decoration:none">Experiment Validation</a>
+  <span class="ab-arrow">&rarr;</span>
+  <a href="ai-title-strategy-en.html" class="ab-step next" style="text-decoration:none">Results Feedback</a>
+</div>
+
+<div class="page">
+  <h1 class="page-title">Translation Optimization Platform</h1>
+  <p class="page-sub">Intelligent translation replacement strategy management, Agent auto-discovery of rules, smart routing, dynamic QA threshold calibration</p>
+
+  <!-- AGENT: RULE DISCOVERY -->
+  <div class="agent-suggest">
+    <div class="as-header"><div class="as-dot"></div><span>Agent Auto-Discovery Rules</span></div>
+    <div class="as-item"><span class="as-num">1</span><div>Discovery: In the past 7 days, <strong>1,842 translations</strong> were manually edited, with <strong>37%</strong> concentrated on size format errors (e.g., "uniform code" mistranslated from a Chinese term instead of "One Size"). Agent has auto-generated 3 candidate rules.<div class="as-action">Review candidate rules &rarr;</div></div></div>
+    <div class="as-item"><span class="as-num">2</span><div>Japanese market translation quality declined (this week's pass rate 62% vs last week's 71%), with the main issue being inconsistent honorific usage (mixed desu/da styles). Agent recommends adding a "Japanese honorific consistency" post-processing rule.<div class="as-action">View samples & confirm &rarr;</div></div></div>
+    <div class="as-item"><span class="as-num">3</span><div>The German tool category already has a replacement rule for "Einheitsgr&ouml;&szlig;e" (one size), but the French market lacks a corresponding rule. Agent discovered through cluster analysis that "taille unique" mistranslations appear frequently (892 times/week).<div class="as-action">Transfer DE rule to FR &rarr;</div></div></div>
+  </div>
+
+  <!-- MODE TABS -->
+  <div class="mode-tabs">
+    <div class="mode-tab active" data-tab="pre">Pre-Translation Replacement</div>
+    <div class="mode-tab" data-tab="post">Post-Translation Replacement</div>
+    <div class="mode-tab" data-tab="router">Smart Routing (Agent)</div>
+  </div>
+
+  <!-- TAB A: PRE-TRANSLATE -->
+  <div class="tab-content active" id="tab-pre">
+    <div class="card">
+      <h3><span class="icon" style="background:#eef2ff;color:#4f46e5">&#x27F3;</span> Workflow</h3>
+      <div class="flow">
+        <div class="flow-step"><div class="step-label">Step 1</div>Original Title</div><div class="flow-arrow">&rarr;</div>
+        <div class="flow-step highlight"><div class="step-label">Step 2</div>Rule-Match Replace<br><small style="color:#6366f1">Remove translation noise</small></div><div class="flow-arrow">&rarr;</div>
+        <div class="flow-step"><div class="step-label">Step 3</div>Translation Engine</div><div class="flow-arrow">&rarr;</div>
+        <div class="flow-step"><div class="step-label">Step 4</div>Target Language</div>
+      </div>
+    </div>
+    <div class="card">
+      <h3><span class="icon" style="background:#fef3c7;color:#d97706">&#x2699;</span> Replacement Rules <span style="font-size:11px;color:#94a3b8;font-weight:400;margin-left:auto">Source tags: &#x1F7E1; Agent mined / &#x26AA; Manual config</span></h3>
+      <table class="rule-tbl">
+        <thead><tr><th>#</th><th>Source Keyword</th><th></th><th>Replace With</th><th>Language</th><th>Hits</th><th>Source</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td><code>[Hot Item]</code></td><td class="arrow-cell">&rarr;</td><td><code class="to">Delete</code></td><td>All</td><td>128,340</td><td><span class="source-tag manual">Manual</span></td></tr>
+          <tr><td>2</td><td><code>New Arrival / Hot Selling</code></td><td class="arrow-cell">&rarr;</td><td><code class="to">Delete</code></td><td>All</td><td>94,217</td><td><span class="source-tag manual">Manual</span></td></tr>
+          <tr><td>3</td><td><code>Multi-functional</code></td><td class="arrow-cell">&rarr;</td><td><code class="to">versatile</code></td><td>EN/DE/FR</td><td>67,832</td><td><span class="source-tag manual">Manual</span></td></tr>
+          <tr style="background:#fffbeb"><td>4</td><td><code>One Size (CN term)</code></td><td class="arrow-cell">&rarr;</td><td><code class="to">One Size</code></td><td>EN/ES</td><td>38,945</td><td><span class="source-tag auto">Agent</span></td></tr>
+          <tr style="background:#fffbeb"><td>5</td><td><code>Factory Direct</code></td><td class="arrow-cell">&rarr;</td><td><code class="to">Delete</code></td><td>All</td><td>12,440</td><td><span class="source-tag auto">Agent</span></td></tr>
+          <tr style="background:#fffbeb"><td>6</td><td><code>Customizable</code></td><td class="arrow-cell">&rarr;</td><td><code class="to">Customizable</code></td><td>EN</td><td>8,720</td><td><span class="source-tag auto">Agent</span></td></tr>
+          <tr><td>7</td><td><code>/(\d+\.?\d*) cun/</code></td><td class="arrow-cell">&rarr;</td><td><code class="to">$1 inch</code></td><td>EN/DE</td><td>22,887</td><td><span class="source-tag manual">Manual</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="card">
+      <h3><span class="icon" style="background:#dcfce7;color:#16a34a">&#x2B21;</span> Before &amp; After Comparison</h3>
+      <div class="compare-row">
+        <div class="compare-box before"><div class="tag">Before Replacement</div><div class="title-text">[Hot Item] New Arrival Multi-Functional Korean Style Dress One Size Available 3.5 cun Belt</div><div class="score">Quality Score: <strong style="color:#dc2626">42</strong></div></div>
+        <div class="compare-box after"><div class="tag">After Replacement</div><div class="title-text">Versatile Korean Style Dress One Size 3.5 inch Belt</div><div class="score">Quality Score: <strong style="color:#16a34a">87</strong></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB B: POST-TRANSLATE -->
+  <div class="tab-content" id="tab-post">
+    <div class="card">
+      <h3><span class="icon" style="background:#eef2ff;color:#4f46e5">&#x27F3;</span> Workflow</h3>
+      <div class="flow">
+        <div class="flow-step"><div class="step-label">Step 1</div>Original Title</div><div class="flow-arrow">&rarr;</div>
+        <div class="flow-step"><div class="step-label">Step 2</div>Translation Engine</div><div class="flow-arrow">&rarr;</div>
+        <div class="flow-step"><div class="step-label">Step 3</div>AI Quality Screening</div><div class="flow-arrow">&rarr;</div>
+        <div class="flow-step highlight"><div class="step-label">Step 4</div>Rule-Match Replace</div><div class="flow-arrow">&rarr;</div>
+        <div class="flow-step"><div class="step-label">Step 5</div>Final Copy</div>
+      </div>
+    </div>
+    <div class="card">
+      <h3><span class="icon" style="background:#fef3c7;color:#d97706">&#x2699;</span> Replacement Rules</h3>
+      <table class="rule-tbl">
+        <thead><tr><th>#</th><th>Translated Keyword</th><th></th><th>Replace With</th><th>Language</th><th>Hits</th><th>Source</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td><code>explosive model</code></td><td class="arrow-cell">&rarr;</td><td><code class="to">Delete</code></td><td>EN</td><td>86,420</td><td><span class="source-tag manual">Manual</span></td></tr>
+          <tr><td>2</td><td><code>hot selling</code></td><td class="arrow-cell">&rarr;</td><td><code class="to">Delete</code></td><td>EN</td><td>72,315</td><td><span class="source-tag manual">Manual</span></td></tr>
+          <tr style="background:#fffbeb"><td>3</td><td><code>uniform code</code></td><td class="arrow-cell">&rarr;</td><td><code class="to">One Size</code></td><td>EN</td><td>4,280</td><td><span class="source-tag auto">Agent</span></td></tr>
+          <tr><td>4</td><td><code>free size</code></td><td class="arrow-cell">&rarr;</td><td><code class="to">One Size</code></td><td>EN</td><td>29,770</td><td><span class="source-tag manual">Manual</span></td></tr>
+          <tr style="background:#fffbeb"><td>5</td><td><code>taille uniforme</code></td><td class="arrow-cell">&rarr;</td><td><code class="to">Taille unique</code></td><td>FR</td><td>892</td><td><span class="source-tag auto">Agent</span></td></tr>
+          <tr><td>6</td><td><code>new style</code></td><td class="arrow-cell">&rarr;</td><td><code class="to">Delete</code></td><td>EN</td><td>58,100</td><td><span class="source-tag manual">Manual</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="card">
+      <h3><span class="icon" style="background:#dcfce7;color:#16a34a">&#x2B21;</span> Before &amp; After Comparison</h3>
+      <div class="compare-row">
+        <div class="compare-box before"><div class="tag">Before Replacement</div><div class="title-text">Explosive Model New Style Versatile Korean Style Dress Uniform Code 8.89cm Belt</div><div class="score">Quality Score: <strong style="color:#dc2626">51</strong></div></div>
+        <div class="compare-box after"><div class="tag">After Replacement</div><div class="title-text">Versatile Korean Style Dress One Size 3.5 inch Belt</div><div class="score">Quality Score: <strong style="color:#16a34a">85</strong></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB C: SMART ROUTER -->
+  <div class="tab-content" id="tab-router">
+    <div class="card">
+      <h3><span class="icon" style="background:#fef3c7;color:#d97706">&#x1F9E0;</span> Smart Routing Decision Logic</h3>
+      <p style="font-size:13px;color:#64748b;margin-bottom:20px;line-height:1.7">Agent automatically determines whether to apply "pre-translation replacement" or "post-translation replacement" based on lexical features, eliminating manual categorization. Core principle: structured noise (marketing words/formats) is cleaned before translation; context-dependent issues (ambiguity/cultural adaptation) are corrected after translation.</p>
+      <div class="router-flow">
+        <div class="router-node input"><strong>Original Title</strong><br><small style="color:#94a3b8">Word-level analysis</small></div>
+        <div class="router-arrow">&rarr;</div>
+        <div class="router-node decision">Word Type<br>Determination</div>
+        <div class="router-arrow">&rarr;</div>
+        <div class="router-branch">
+          <div style="display:flex;align-items:center;gap:8px">
+            <small style="color:#2563eb;font-weight:600;font-size:11px">Marketing words/formats/units</small>
+            <div class="router-arrow">&rarr;</div>
+            <div class="router-node pre"><strong>Pre-Translation Replace</strong><br><small style="color:#2563eb">Clean then translate</small></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <small style="color:#7c3aed;font-weight:600;font-size:11px">Context/cultural/ambiguous words</small>
+            <div class="router-arrow">&rarr;</div>
+            <div class="router-node post"><strong>Post-Translation Replace</strong><br><small style="color:#7c3aed">Translate then fix by context</small></div>
+          </div>
+        </div>
+        <div class="router-arrow">&rarr;</div>
+        <div class="router-node output"><strong>Merged Output</strong><br><small style="color:#16a34a">Final target language</small></div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Router Classifier Training Data</h3>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div style="background:#f8f9fc;border-radius:10px;padding:16px">
+          <div style="font-size:12px;font-weight:600;color:#2563eb;margin-bottom:8px">&rarr; Pre-Translation Replacement (68% of rules)</div>
+          <div style="font-size:13px;color:#475569;line-height:1.8">Marketing modifiers (hot selling/best seller/new arrival)<br>Size format terms (One Size/XXL)<br>Unit markers (cun/cm&rarr;inch)<br>Supplier phrases (factory direct/customizable)<br>Redundant terms (high quality/premium/selected)</div>
+        </div>
+        <div style="background:#f8f9fc;border-radius:10px;padding:16px">
+          <div style="font-size:12px;font-weight:600;color:#7c3aed;margin-bottom:8px">&rarr; Post-Translation Replacement (32% of rules)</div>
+          <div style="font-size:13px;color:#475569;line-height:1.8">Cultural adaptation (Korean style)<br>Contextual ambiguity (multi-functional &rarr; versatile/multifunctional based on category)<br>Brand name transliteration correction<br>Honorific/style consistency (Japanese desu/da)<br>Compliance-sensitive terms (cosmetics claims by country)</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DYNAMIC THRESHOLD -->
+  <h2 class="section-title">Dynamic QA Threshold Calibration <span class="badge-agent">Agent</span></h2>
+  <p class="section-sub">Auto-calibrate AI QA confidence thresholds by language &times; category, replacing the one-size-fits-all 0.75 threshold</p>
+
+  <div class="card">
+    <div class="heatmap-wrap">
+      <table class="heatmap" id="heatmapTable"></table>
+    </div>
+    <div style="display:flex;gap:16px;margin-top:14px;align-items:center;font-size:11px;color:#94a3b8">
+      <span>Threshold color scale:</span>
+      <span style="display:flex;align-items:center;gap:4px"><span style="width:16px;height:12px;border-radius:3px;background:#dcfce7;display:inline-block"></span> Lenient (&gt;0.65) High translation difficulty</span>
+      <span style="display:flex;align-items:center;gap:4px"><span style="width:16px;height:12px;border-radius:3px;background:#fef3c7;display:inline-block"></span> Standard (0.70&ndash;0.80)</span>
+      <span style="display:flex;align-items:center;gap:4px"><span style="width:16px;height:12px;border-radius:3px;background:#dbeafe;display:inline-block"></span> Strict (&gt;0.80) Low translation difficulty</span>
+    </div>
+  </div>
+
+  <!-- QA PIPELINE -->
+  <h2 class="section-title" style="margin-top:36px">AI QA + Manual Review Pipeline</h2>
+  <p class="section-sub">After dynamic threshold calibration, the review queue is more precise, improving human efficiency by 40%</p>
+
+  <div class="funnel">
+    <div class="funnel-step"><div class="f-icon">&#x1F916;</div><div class="f-label">AI QA</div><div class="f-value">100%</div><div class="f-desc">Dynamic threshold: language &times; category adaptive</div></div>
+    <div class="funnel-arrow">&rarr;</div>
+    <div class="funnel-step"><div class="f-icon">&#x1F4CB;</div><div class="f-label">Pushed to Review</div><div class="f-value">18%</div><div class="f-desc">&darr;5pp vs fixed threshold (was 23%)</div></div>
+    <div class="funnel-arrow">&rarr;</div>
+    <div class="funnel-step"><div class="f-icon">&#x1F464;</div><div class="f-label">Manual Review</div><div class="f-value">91%</div><div class="f-desc">Review hit rate &uarr; (fewer invalid reviews)</div></div>
+    <div class="funnel-arrow">&rarr;</div>
+    <div class="funnel-step"><div class="f-icon">&#x2705;</div><div class="f-label">Go Live</div><div class="f-value">99.1%</div><div class="f-desc">Final quality compliance rate</div></div>
+  </div>
+
+  <div class="card" style="margin-top:20px">
+    <h3><span class="icon" style="background:#eef2ff;color:#4f46e5">&#x1F4CA;</span> QA Pass Rate by Language (Dynamic vs Fixed Threshold)</h3>
+    <div style="height:260px"><canvas id="qaChart"></canvas></div>
+  </div>
+</div>
+
+<script>
+/* TAB */
+document.querySelectorAll('.mode-tab').forEach(t=>{t.addEventListener('click',()=>{document.querySelectorAll('.mode-tab').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));t.classList.add('active');document.getElementById('tab-'+t.dataset.tab).classList.add('active')})});
+
+/* HEATMAP */
+const langs=['English','Deutsch','Fran\u00e7ais','Espa\u00f1ol','Italiano','\u65E5\u672C\u8A9E','\uD55C\uAD6D\uC5B4','Portugu\u00eas','\u0627\u0644\u0639\u0631\u0628\u064A\u0629','\u0E20\u0E32\u0E29\u0E32\u0E44\u0E17\u0E22'];
+const cats=['Apparel','Tools','Home','Beauty','3C','Pets'];
+const thresholds=[
+  [.82,.78,.80,.75,.85,.70],[.76,.72,.74,.70,.78,.68],[.73,.70,.72,.68,.75,.66],[.75,.72,.74,.69,.77,.67],
+  [.72,.68,.70,.66,.74,.65],[.68,.64,.66,.62,.70,.60],[.66,.62,.64,.60,.68,.58],[.74,.70,.72,.68,.76,.66],
+  [.64,.60,.62,.58,.66,.56],[.65,.62,.63,.59,.67,.57]
+];
+const ht=document.getElementById('heatmapTable');
+let hdr='<tr><th></th>';cats.forEach(c=>hdr+=`<th>${c}</th>`);hdr+='</tr>';
+let body='';
+langs.forEach((l,li)=>{body+=`<tr><th style="text-align:left;padding-right:16px">${l}</th>`;cats.forEach((c,ci)=>{const v=thresholds[li][ci];const bg=v>.80?'#dbeafe':v>.70?'#fef3c7':v>.60?'#dcfce7':'#fee2e2';const tc=v>.80?'#2563eb':v>.70?'#d97706':'#16a34a';body+=`<td><div class="cell" style="background:${bg};color:${tc}">${v.toFixed(2)}</div></td>`});body+='</tr>'});
+ht.innerHTML=hdr+body;
+
+/* QA CHART */
+new Chart(document.getElementById('qaChart'),{type:'bar',data:{labels:langs,datasets:[{label:'Dynamic Threshold &mdash; No-Review Rate',data:[85,78,75,80,76,70,68,79,66,69],backgroundColor:'#818cf8',borderRadius:4},{label:'Fixed Threshold 0.75 &mdash; No-Review Rate',data:[82,74,71,77,73,68,65,76,62,66],backgroundColor:'#e2e4e9',borderRadius:4},{label:'Post-Review Pass Rate',data:[99,98,98,98,98,97,97,98,97,97],backgroundColor:'#34d399',borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top',labels:{font:{size:11}}}},scales:{y:{beginAtZero:true,max:100,ticks:{callback:v=>v+'%'},grid:{color:'#f1f3f7'}},x:{grid:{display:false}}}}});
+</script>
+</body>
+</html>

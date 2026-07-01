@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Li Jiazhen - Portfolio</title>
+<style>
+  body {
+    margin: 0; background: #1a1a1a;
+    display: flex; justify-content: center; align-items: center;
+    min-height: 100vh; font-family: 'Courier New', monospace; overflow: hidden;
+  }
+  #wrapper {
+    position: relative;
+    border: 8px solid #3e2723;
+    box-shadow: 0 0 50px rgba(0,0,0,0.8);
+  }
+  canvas {
+    background: #7a5a3a; display: block;
+    image-rendering: pixelated; image-rendering: crisp-edges;
+  }
+
+  /* ===== Pixel Modal ===== */
+  #project-modal {
+    position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 380px; background: #ecf0f1;
+    border: 6px solid #2c3e50;
+    padding: 24px; display: none; z-index: 100;
+    box-shadow: 10px 10px 0 #000;
+  }
+  #modal-cat {
+    display: inline-block; padding: 3px 10px;
+    font-size: 11px; font-weight: bold; margin-bottom: 10px;
+    letter-spacing: 0.1em;
+  }
+  #modal-cat.cloud  { background: #3498db; color: #fff; }
+  #modal-cat.ground { background: #f39c12; color: #fff; }
+  #modal-cat.trap   { background: #e74c3c; color: #fff; }
+  #modal-title {
+    color: #e67e22; font-size: 22px; margin: 0 0 8px 0;
+    border-bottom: 3px solid #bdc3c7; padding-bottom: 8px;
+  }
+  #modal-desc {
+    color: #2c3e50; font-size: 13px; line-height: 1.7;
+    margin-bottom: 16px;
+  }
+  #modal-val {
+    font-size: 16px; font-weight: bold; margin-bottom: 16px;
+  }
+  #modal-val.pos { color: #27ae60; }
+  #modal-val.neg { color: #e74c3c; }
+  .modal-btns { display: flex; justify-content: flex-end; }
+  .pixel-btn {
+    padding: 10px 18px; font-family: 'Courier New', monospace;
+    font-weight: bold; font-size: 13px; border: none; cursor: pointer;
+  }
+  .pixel-btn.close {
+    background: #e74c3c; color: #fff;
+    box-shadow: 4px 4px 0 #962d22;
+  }
+  .pixel-btn:active {
+    transform: translate(2px, 2px);
+    box-shadow: 2px 2px 0 #962d22;
+  }
+
+  /* ===== End Overlay ===== */
+  #end-overlay {
+    position: absolute; inset: 0;
+    background: rgba(0,0,0,0.88); display: none;
+    flex-direction: column; align-items: center; justify-content: center;
+    z-index: 90; text-align: center; padding: 30px;
+  }
+  #end-overlay.on { display: flex; }
+  #end-overlay h2 {
+    color: #ffd700; font-size: 28px; margin-bottom: 8px;
+    font-family: 'Courier New', monospace;
+  }
+  #end-overlay .end-score {
+    color: #ecf0f1; font-size: 18px; margin-bottom: 20px;
+    font-family: 'Courier New', monospace;
+  }
+  #end-overlay .end-msg {
+    color: #bdc3c7; font-size: 13px; line-height: 1.8;
+    max-width: 420px; margin-bottom: 24px;
+  }
+  #end-overlay button {
+    background: #f39c12; color: #1a1a1a; border: none;
+    padding: 12px 30px; font-size: 16px; font-weight: bold;
+    font-family: 'Courier New', monospace; cursor: pointer;
+    box-shadow: 4px 4px 0 #d68910;
+  }
+  #end-overlay button:active {
+    transform: translate(2px, 2px); box-shadow: 2px 2px 0 #d68910;
+  }
+
+  @media (max-width: 820px) {
+    #wrapper { border-width: 4px; }
+    #project-modal { width: 85%; padding: 16px; }
+  }
+</style>
+</head>
+<body>
+
+<div id="wrapper">
+  <canvas id="gameCanvas" width="800" height="600"></canvas>
+
+  <!-- Project Detail Modal -->
+  <div id="project-modal">
+    <span id="modal-cat">Tag</span>
+    <h2 id="modal-title">Project Name</h2>
+    <div id="modal-desc">Description here</div>
+    <div id="modal-val">+300</div>
+    <div class="modal-btns">
+      <button class="pixel-btn close" id="modal-close">Keep Digging [OK]</button>
+    </div>
+  </div>
+
+  <!-- End Game -->
+  <div id="end-overlay">
+    <h2 id="end-title">Clock Out!</h2>
+    <p class="end-score" id="end-score"></p>
+    <p class="end-msg" id="end-msg"></p>
+    <button id="end-btn">Play Again</button>
+  </div>
+</div>
+
+<script>
+window.onerror = function(msg, url, line) {
+  alert("Game error: " + msg);
+};
+
+(function() {
+  var canvas = document.getElementById('gameCanvas');
+  var ctx = canvas.getContext('2d');
+  var W = 800, H = 600;
+  var GROUND_Y = 110;
+
+  var score = 0;
+  var timeLeft = 75;
+  var isPaused = false;
+  var isRunning = true;
+  var frame = 0;
+
+  /* ── Hook ── */
+  var hook = {
+    x: 400, y: 80,
+    angle: Math.PI / 2,
+    len: 45,
+    status: 'swing',
+    dir: 1,
+    speed: 6,
+    target: null
+  };
+
+  /* ── Cloud items: BIG, HIGH score ── */
+  var cloudItems = [
+    {
+      name: "AIGC System", cat: "cloud",
+      desc: "Product title A/B testing system — coordinated algorithm, engineering, and B/C-side teams across 1-5M products. GMV up 5-7%. Great numbers, but I never saw what those products looked like.",
+      colorOut: "#3498db", colorIn: "#2c3e50",
+      x: 150, y: 220, val: 300, sz: 50
+    },
+    {
+      name: "Logistics Settlement", cat: "cloud",
+      desc: "Inter-warehouse transfer settlement — freight billing, reconciliation, subsidy management. Processed 800K-1.5M yuan monthly, 99.5% accuracy. But I never felt the weight of that money.",
+      colorOut: "#9b59b6", colorIn: "#6c3483",
+      x: 630, y: 200, val: 280, sz: 48
+    },
+    {
+      name: "Hema Category PM", cat: "cloud",
+      desc: "Bakery category PM at Hema. The products felt more 'real' — but the work didn't change: write PRDs, align stakeholders, chase KPIs. New platform, same floating feeling.",
+      colorOut: "#5dade2", colorIn: "#2471a3",
+      x: 380, y: 340, val: 250, sz: 44
+    },
+    {
+      name: "Supply Chain PM", cat: "cloud",
+      desc: "Fully-managed merchant product management — automated onboarding, product info optimization. Watching dashboards fluctuate daily, like weather forecasts that had nothing to do with me.",
+      colorOut: "#1abc9c", colorIn: "#148f77",
+      x: 130, y: 460, val: 200, sz: 42
+    }
+  ];
+
+  /* ── Ground items: SMALL, LOW score ── */
+  var groundItems = [
+    {
+      name: "Bakery AI Agent", cat: "ground",
+      desc: "Data-driven product selection + AI Agent pipeline — from trend insights to pricing recommendations. Wrote prompts, ran SQL, built reports myself. First time I felt like I was creating, not just pushing.",
+      colorOut: "#f1c40f", colorIn: "#d4ac0d",
+      x: 580, y: 410, val: 80, sz: 24
+    },
+    {
+      name: "Content Creator", cat: "ground",
+      desc: "30+ Douyin videos, 22 Xiaohongshu posts. 10K followers in 3 months, monetized. Wrote, filmed, and edited every piece myself. First time building something from zero that real people actually saw.",
+      colorOut: "#e67e22", colorIn: "#ca6f1e",
+      x: 300, y: 490, val: 60, sz: 22
+    },
+    {
+      name: "AI Toolchain", cat: "ground",
+      desc: "Auto-generated pricing reports, competitor data scraping, Xianyu auto-bargaining — not lab projects, but tools built from real work pain points using vibe coding. AI as an extension of my hands.",
+      colorOut: "#f39c12", colorIn: "#d68910",
+      x: 690, y: 510, val: 50, sz: 20
+    },
+    {
+      name: "Pricing Model", cat: "ground",
+      desc: "Price elasticity analysis + four-quadrant anchor strategy. From ODPS data to similar-product matching to pricing model — walked the entire path myself. First time a PM felt like a builder.",
+      colorOut: "#e74c3c", colorIn: "#cb4335",
+      x: 180, y: 540, val: 40, sz: 18
+    }
+  ];
+
+  /* ── Traps ── */
+  var trapItems = [
+    { name: "Boss Calling", cat: "trap", desc: "A PM's worst nightmare — usually means scope changes or emergency reprioritization.", colorOut: "#e74c3c", colorIn: "#922b21", x: 460, y: 250, val: -200, sz: 38 },
+    { name: "Ad-hoc Meeting", cat: "trap", desc: "Meetings that never end, alignments that never align.", colorOut: "#95a5a6", colorIn: "#717d7e", x: 250, y: 360, val: -100, sz: 34 },
+    { name: "99+ Messages", cat: "trap", desc: "Three groups @-ing you, five docs pending review, and someone chasing for updates.", colorOut: "#f1948a", colorIn: "#c0392b", x: 560, y: 310, val: -150, sz: 32 }
+  ];
+
+  var allItems = [];
+  var collected = [];
+
+  function resetItems() {
+    allItems = cloudItems.concat(groundItems).concat(trapItems).map(function(it) {
+      var copy = {};
+      for (var k in it) copy[k] = it[k];
+      return copy;
+    });
+  }
+
+  /* ── Pixel Character + Sky ── */
+  function drawPixelGuy() {
+    ctx.fillStyle = '#87ceeb'; ctx.fillRect(0, 0, W, GROUND_Y - 10);
+    ctx.fillStyle = 'rgba(255,255,255,0.55)';
+    ctx.fillRect(60, 20, 80, 10); ctx.fillRect(70, 14, 50, 8);
+    ctx.fillRect(500, 30, 90, 10); ctx.fillRect(515, 22, 60, 8);
+    ctx.fillRect(280, 16, 55, 8); ctx.fillRect(290, 10, 35, 6);
+    ctx.fillStyle = '#2ecc71'; ctx.fillRect(0, GROUND_Y - 10, W, 16);
+    ctx.fillStyle = '#27ae60'; ctx.fillRect(0, GROUND_Y + 4, W, 6);
+    ctx.fillStyle = '#2ecc71';
+    for (var x = 0; x < W; x += 16) { ctx.fillRect(x, GROUND_Y - 14, 3, 6); ctx.fillRect(x + 8, GROUND_Y - 12, 2, 4); }
+    ctx.fillStyle = '#5d4037'; ctx.fillRect(355, GROUND_Y - 18, 90, 12);
+    ctx.fillStyle = '#795548'; ctx.fillRect(358, GROUND_Y - 18, 84, 6);
+    ctx.fillStyle = '#ffdbac'; ctx.fillRect(390, 32, 20, 18);
+    ctx.fillStyle = '#3498db'; ctx.fillRect(385, 50, 30, 24);
+    ctx.fillStyle = '#2c3e50'; ctx.fillRect(388, 74, 10, 14); ctx.fillRect(402, 74, 10, 14);
+    ctx.fillStyle = '#795548'; ctx.fillRect(378, 26, 44, 8);
+    ctx.fillStyle = '#5d4037'; ctx.fillRect(376, 32, 48, 4);
+    ctx.fillStyle = '#222'; ctx.fillRect(394, 38, 4, 3); ctx.fillRect(402, 38, 4, 3);
+    ctx.fillStyle = '#e74c3c'; ctx.fillRect(396, 44, 8, 2);
+    ctx.fillStyle = '#ffdbac'; ctx.fillRect(375, 52, 10, 8); ctx.fillRect(415, 52, 10, 8);
+  }
+
+  /* ── Ground Texture ── */
+  function drawGround() {
+    ctx.fillStyle = '#7a5a3a'; ctx.fillRect(0, GROUND_Y + 10, W, H - GROUND_Y - 10);
+    ctx.fillStyle = '#6b4f2e'; ctx.fillRect(0, GROUND_Y + 10, W, 8);
+    ctx.fillStyle = 'rgba(0,0,0,0.07)';
+    for (var i = 0; i < 40; i++) { ctx.fillRect((i*137+23)%W, GROUND_Y+30+(i*73+11)%(H-GROUND_Y-60), 12+(i%4)*6, 3); }
+    ctx.fillStyle = '#5a3d20';
+    for (var i = 0; i < 10; i++) { ctx.fillRect((i*167+83)%W, GROUND_Y+50+(i*113+17)%(H-GROUND_Y-100), 8+i%4, 6+i%3); }
+    ctx.fillStyle = 'rgba(255,215,0,0.07)';
+    for (var i = 0; i < 12; i++) { ctx.fillRect((i*193+47)%W, GROUND_Y+40+(i*89+31)%(H-GROUND_Y-80), 3, 3); }
+  }
+
+  /* ── Draw Items (pixel squares: outer + inner) ── */
+  function drawItems() {
+    for (var i = 0; i < allItems.length; i++) {
+      var it = allItems[i];
+      var half = it.sz / 2;
+      var ihalf = it.sz / 4;
+      var bob = Math.sin(frame * 0.02 + i * 1.7) * 2;
+      var y = it.y + bob;
+
+      /* shadow */
+      ctx.fillStyle = 'rgba(0,0,0,0.12)';
+      ctx.fillRect(it.x - half + 3, y + half + 2, it.sz, 4);
+
+      /* outer */
+      ctx.fillStyle = it.colorOut;
+      ctx.fillRect(it.x - half, y - half, it.sz, it.sz);
+
+      /* inner */
+      ctx.fillStyle = it.colorIn;
+      ctx.fillRect(it.x - ihalf, y - ihalf, ihalf * 2, ihalf * 2);
+
+      /* pixel highlight top-left */
+      ctx.fillStyle = 'rgba(255,255,255,0.2)';
+      ctx.fillRect(it.x - half, y - half, it.sz, 2);
+      ctx.fillRect(it.x - half, y - half, 2, it.sz);
+
+      /* pixel shadow bottom-right */
+      ctx.fillStyle = 'rgba(0,0,0,0.15)';
+      ctx.fillRect(it.x - half, y + half - 2, it.sz, 2);
+      ctx.fillRect(it.x + half - 2, y - half, 2, it.sz);
+
+      /* value */
+      ctx.fillStyle = it.val > 0 ? '#ffd700' : '#ff6b6b';
+      ctx.font = 'bold 14px "Courier New"';
+      ctx.textAlign = 'center';
+      ctx.fillText((it.val > 0 ? '+' : '') + it.val, it.x, y - half - 5);
+
+      /* name */
+      ctx.fillStyle = 'rgba(255,255,255,0.75)';
+      ctx.font = '10px "Courier New"';
+      ctx.fillText(it.name, it.x, y + half + 13);
+    }
+    ctx.textAlign = 'left';
+  }
+
+  /* ── Hook ── */
+  function drawHook() {
+    var tx = hook.x + Math.cos(hook.angle) * hook.len;
+    var ty = hook.y + Math.sin(hook.angle) * hook.len;
+
+    ctx.strokeStyle = '#3e2723'; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(hook.x, hook.y); ctx.lineTo(tx, ty); ctx.stroke();
+
+    /* claw pixels */
+    ctx.fillStyle = '#555';
+    ctx.fillRect(tx - 2, ty, 4, 8);
+    ctx.fillRect(tx - 8, ty + 6, 5, 7);
+    ctx.fillRect(tx + 3, ty + 6, 5, 7);
+    ctx.fillStyle = '#888';
+    ctx.fillRect(tx - 9, ty + 12, 4, 3);
+    ctx.fillRect(tx + 5, ty + 12, 4, 3);
+
+    /* grabbed item */
+    if (hook.target) {
+      var h2 = hook.target.sz / 2;
+      var ih2 = hook.target.sz / 4;
+      ctx.fillStyle = hook.target.colorOut;
+      ctx.fillRect(tx - h2, ty + 16 - h2, hook.target.sz, hook.target.sz);
+      ctx.fillStyle = hook.target.colorIn;
+      ctx.fillRect(tx - ih2, ty + 16 - ih2, ih2 * 2, ih2 * 2);
+    }
+  }
+
+  /* ── HUD ── */
+  function drawHUD() {
+    ctx.fillStyle = 'rgba(0,0,0,0.55)';
+    ctx.fillRect(0, 0, W, 34);
+    ctx.fillStyle = '#ffd700';
+    ctx.font = 'bold 20px "Courier New"';
+    ctx.textAlign = 'left';
+    ctx.fillText('KPI: ' + score, 16, 24);
+    ctx.fillStyle = '#ecf0f1';
+    ctx.textAlign = 'right';
+    ctx.fillText('TIME: ' + Math.ceil(Math.max(0, timeLeft)), W - 16, 24);
+    ctx.textAlign = 'center';
+    if (hook.status === 'swing' && isRunning && !isPaused) {
+      ctx.fillStyle = 'rgba(255,255,255,' + (0.3 + Math.sin(frame * 0.04) * 0.15) + ')';
+      ctx.font = '12px "Courier New"';
+      ctx.fillText('[ SPACE / CLICK to fire ]', W / 2, H - 14);
+    }
+    ctx.textAlign = 'left';
+  }
+
+  /* ── Update ── */
+  function update() {
+    if (isPaused || !isRunning) return;
+    frame++;
+    timeLeft -= 1 / 60;
+    if (timeLeft <= 0) { timeLeft = 0; endGame(); return; }
+
+    if (hook.status === 'swing') {
+      hook.angle += 0.02 * hook.dir;
+      if (Math.abs(hook.angle - Math.PI / 2) > 1.2) hook.dir *= -1;
+    }
+    else if (hook.status === 'extend') {
+      hook.len += hook.speed;
+      var tx = hook.x + Math.cos(hook.angle) * hook.len;
+      var ty = hook.y + Math.sin(hook.angle) * hook.len;
+      for (var i = 0; i < allItems.length; i++) {
+        var it = allItems[i];
+        var half = it.sz / 2;
+        if (tx > it.x - half && tx < it.x + half && ty > it.y - half && ty < it.y + half) {
+          hook.target = allItems.splice(i, 1)[0];
+          hook.status = 'retract';
+          break;
+        }
+      }
+      if (tx < 0 || tx > W || ty > H || hook.len > 540) hook.status = 'retract';
+    }
+    else if (hook.status === 'retract') {
+      var spd = hook.target ? Math.max(2, 7 - (hook.target.sz / 10)) : 7;
+      hook.len -= spd;
+      if (hook.len <= 45) {
+        if (hook.target) {
+          score += hook.target.val;
+          if (score < 0) score = 0;
+          collected.push(hook.target);
+          openModal(hook.target);
+          hook.target = null;
+        }
+        hook.status = 'swing';
+        hook.len = 45;
+      }
+    }
+  }
+
+  /* ── Main Loop ── */
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+    drawGround();
+    drawPixelGuy();
+    drawItems();
+    drawHook();
+    drawHUD();
+    update();
+    requestAnimationFrame(draw);
+  }
+
+  /* ── Modal ── */
+  function openModal(project) {
+    isPaused = true;
+    var catEl = document.getElementById('modal-cat');
+    catEl.textContent = project.cat === 'cloud' ? 'Cloud Project' : project.cat === 'ground' ? 'Grounded' : 'Workplace Trap';
+    catEl.className = project.cat;
+    document.getElementById('modal-title').textContent = project.name;
+    document.getElementById('modal-desc').textContent = project.desc || '';
+    var valEl = document.getElementById('modal-val');
+    valEl.textContent = (project.val > 0 ? '+' : '') + project.val + ' KPI';
+    valEl.className = project.val > 0 ? 'pos' : 'neg';
+    document.getElementById('project-modal').style.display = 'block';
+  }
+
+  function closeModal() {
+    document.getElementById('project-modal').style.display = 'none';
+    isPaused = false;
+  }
+  document.getElementById('modal-close').addEventListener('click', closeModal);
+
+  /* ── End Game ── */
+  function endGame() {
+    isRunning = false;
+    var cloudN = 0, groundN = 0;
+    collected.forEach(function(c) { if (c.cat === 'cloud') cloudN++; else if (c.cat === 'ground') groundN++; });
+
+    document.getElementById('end-score').textContent = 'Final KPI: ' + score;
+    if (groundN >= 3) {
+      document.getElementById('end-title').textContent = 'You Found What Truly Matters';
+      document.getElementById('end-msg').textContent = 'The cloud projects scored high and loomed large — but they were about pushing others to build. What made you feel grounded were the small things you made with your own hands. That\'s the journey from clouds to solid ground.';
+    } else if (cloudN >= 3) {
+      document.getElementById('end-title').textContent = 'Great KPI, But...';
+      document.getElementById('end-msg').textContent = 'You grabbed plenty of big projects — impressive scores. But they floated away like clouds. The small, grounded things are what truly belong to you. Care to try again?';
+    } else {
+      document.getElementById('end-title').textContent = 'Clock Out!';
+      document.getElementById('end-msg').textContent = 'Big projects look shiny, but the small ones are proof of truly walking on solid ground. Every nugget was dug out by your own hands.';
+    }
+    document.getElementById('end-overlay').classList.add('on');
+  }
+
+  document.getElementById('end-btn').addEventListener('click', function(e) {
+    e.stopPropagation();
+    document.getElementById('end-overlay').classList.remove('on');
+    score = 0; timeLeft = 75; isRunning = true; isPaused = false; frame = 0;
+    hook.status = 'swing'; hook.len = 45; hook.target = null; hook.dir = 1;
+    collected = [];
+    resetItems();
+  });
+
+  /* ── Input ── */
+  function fire() { if (hook.status === 'swing' && isRunning && !isPaused) hook.status = 'extend'; }
+  window.addEventListener('mousedown', fire);
+  window.addEventListener('touchstart', function(e) { e.preventDefault(); fire(); }, { passive: false });
+  window.addEventListener('keydown', function(e) { if (e.code === 'Space' || e.keyCode === 32) { e.preventDefault(); fire(); } });
+
+  /* ── Responsive ── */
+  function resize() {
+    var maxW = Math.min(window.innerWidth - 24, 800);
+    var maxH = window.innerHeight - 24;
+    var s = Math.min(maxW / W, maxH / H, 1);
+    canvas.style.width = Math.floor(W * s) + 'px';
+    canvas.style.height = Math.floor(H * s) + 'px';
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  /* ── Start ── */
+  resetItems();
+  draw();
+})();
+</script>
+</body>
+</html>

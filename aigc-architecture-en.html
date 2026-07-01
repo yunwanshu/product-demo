@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AIGC Product Optimization Platform — System Architecture Overview</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif; background: #F8F9FB; color: #1E293B; min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 40px 20px; }
+
+  .lang-switch { position: fixed; top: 16px; right: 24px; font-size: 12px; color: #6B5CE7; text-decoration: none; border: 1px solid #D4CCEF; border-radius: 6px; padding: 4px 12px; background: #fff; z-index: 200; }
+  .lang-switch:hover { background: #F5F3FF; }
+
+  .title-area { text-align: center; margin-bottom: 48px; }
+  .title-area h1 { font-size: 28px; font-weight: 700; color: #1E293B; letter-spacing: -0.5px; }
+  .title-area .subtitle { font-size: 14px; color: #94A3B8; margin-top: 8px; }
+
+  .diagram { position: relative; width: 960px; height: 680px; }
+
+  /* ── Agent outer ring ── */
+  .agent-ring {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    border: 2px dashed #B8A9F0; border-radius: 24px;
+    background: linear-gradient(135deg, rgba(107,92,231,0.03), rgba(107,92,231,0.06));
+  }
+  .agent-ring-label {
+    position: absolute; top: -14px; left: 50%; transform: translateX(-50%);
+    background: #6B5CE7; color: #fff; font-size: 13px; font-weight: 600;
+    padding: 4px 20px; border-radius: 20px; white-space: nowrap; letter-spacing: 0.5px;
+  }
+
+  /* ── Agent capability tags ── */
+  .agent-caps { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+  .agent-cap {
+    position: absolute; background: #fff; border: 1.5px solid #D4CCEF;
+    border-radius: 8px; padding: 6px 12px; font-size: 11.5px; color: #6B5CE7;
+    font-weight: 500; white-space: nowrap;
+    box-shadow: 0 1px 3px rgba(107,92,231,0.08);
+  }
+  .agent-cap::before {
+    content: ''; display: inline-block; width: 6px; height: 6px;
+    background: #6B5CE7; border-radius: 50%; margin-right: 6px; vertical-align: middle;
+  }
+
+  /* ── Core triangle layout ── */
+  .module {
+    position: absolute; width: 260px; background: #fff; border-radius: 16px;
+    padding: 24px; box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    border: 2px solid transparent; transition: all 0.25s ease;
+    cursor: pointer;
+  }
+  .module:hover { transform: translateY(-3px); box-shadow: 0 6px 20px rgba(0,0,0,0.1); }
+  .module .icon { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; margin-bottom: 14px; }
+  .module .num { font-size: 11px; font-weight: 700; color: #94A3B8; margin-bottom: 6px; letter-spacing: 1px; }
+  .module h3 { font-size: 16px; font-weight: 700; margin-bottom: 8px; }
+  .module p { font-size: 12.5px; color: #64748B; line-height: 1.6; }
+  .module .tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 12px; }
+  .module .tag { font-size: 10.5px; padding: 3px 8px; border-radius: 4px; font-weight: 500; }
+
+  /* Module 1 - Translation Platform (top-left) */
+  .m-translate { top: 80px; left: 60px; border-color: #E0F2FE; }
+  .m-translate .icon { background: #E0F2FE; }
+  .m-translate h3 { color: #0369A1; }
+  .m-translate .tag { background: #E0F2FE; color: #0369A1; }
+
+  /* Module 2 - Experiment Platform (top-right) */
+  .m-experiment { top: 80px; right: 60px; border-color: #FEF3C7; }
+  .m-experiment .icon { background: #FEF3C7; }
+  .m-experiment h3 { color: #B45309; }
+  .m-experiment .tag { background: #FEF3C7; color: #B45309; }
+
+  /* Module 3 - AI Strategy Library (bottom-center) */
+  .m-strategy { bottom: 100px; left: 50%; transform: translateX(-50%); border-color: #F3E8FF; }
+  .m-strategy:hover { transform: translateX(-50%) translateY(-3px); }
+  .m-strategy .icon { background: #F3E8FF; }
+  .m-strategy h3 { color: #7C3AED; }
+  .m-strategy .tag { background: #F3E8FF; color: #7C3AED; }
+
+  /* ── Connection arrows (SVG) ── */
+  .arrows-svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+  .arrow-path { fill: none; stroke-width: 2; stroke-linecap: round; }
+  .arrow-label {
+    position: absolute; font-size: 11px; font-weight: 600; padding: 4px 10px;
+    border-radius: 6px; white-space: nowrap; pointer-events: none;
+  }
+
+  /* ── Bottom data flow ── */
+  .data-flow {
+    width: 960px; margin-top: 32px; background: #fff; border-radius: 14px;
+    padding: 20px 32px; box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+  }
+  .data-flow h4 { font-size: 13px; color: #94A3B8; font-weight: 600; margin-bottom: 14px; letter-spacing: 0.5px; }
+  .flow-steps { display: flex; align-items: center; gap: 0; }
+  .flow-step {
+    flex: 1; text-align: center; padding: 10px 8px; font-size: 12px;
+    color: #475569; position: relative; font-weight: 500;
+  }
+  .flow-step .step-icon { font-size: 22px; margin-bottom: 6px; }
+  .flow-step .step-label { font-size: 11.5px; color: #1E293B; font-weight: 600; }
+  .flow-step .step-desc { font-size: 10.5px; color: #94A3B8; margin-top: 3px; }
+  .flow-arrow { color: #CBD5E1; font-size: 18px; flex-shrink: 0; }
+
+  /* ── Tooltip ── */
+  .tooltip {
+    position: fixed; background: #1E293B; color: #fff; font-size: 12px;
+    padding: 10px 14px; border-radius: 8px; max-width: 280px; line-height: 1.6;
+    pointer-events: none; opacity: 0; transition: opacity 0.2s;
+    z-index: 100; box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+  }
+  .tooltip.show { opacity: 1; }
+</style>
+</head>
+<body>
+
+<a class="lang-switch" href="aigc-architecture.html">Switch to Chinese</a>
+
+<div class="title-area">
+  <h1>AIGC Product Optimization Platform · System Architecture Overview</h1>
+  <div class="subtitle">Three-Module Closed-Loop Flywheel + Agent Intelligence Enhancement Layer</div>
+</div>
+
+<div class="diagram">
+  <!-- Agent outer ring -->
+  <div class="agent-ring">
+    <div class="agent-ring-label">Agent Intelligence Layer · Intelligent Enhancement Layer</div>
+  </div>
+
+  <!-- Agent capability tags -->
+  <div class="agent-caps">
+    <div class="agent-cap" style="top:18px; left:30px;">Auto Rule Discovery</div>
+    <div class="agent-cap" style="top:18px; left:160px;">Intelligent Routing</div>
+    <div class="agent-cap" style="top:18px; right:160px;">Bayesian Sequential Testing</div>
+    <div class="agent-cap" style="top:18px; right:20px;">Meta-Analysis</div>
+    <div class="agent-cap" style="bottom:18px; left:30px;">Dynamic Threshold Calibration</div>
+    <div class="agent-cap" style="bottom:18px; left:180px;">LLM-as-Judge</div>
+    <div class="agent-cap" style="bottom:18px; right:180px;">Prompt Self-Iteration</div>
+    <div class="agent-cap" style="bottom:18px; right:20px;">Cross-Country Migration</div>
+  </div>
+
+  <!-- Module 1: Translation Platform -->
+  <div class="module m-translate"
+       data-tip="A dual-channel system managing translation replacement strategies. Pre-translation replacement handles structural noise (units/symbols/HTML), while post-translation replacement handles context-dependent words (brands/styles). The Agent automatically discovers new rules, intelligently routes between pre- and post-processing, and dynamically calibrates QC thresholds.">
+    <div class="icon">🌐</div>
+    <div class="num">01</div>
+    <h3>Translation Optimization Platform</h3>
+    <p>A dual-channel system managing translation replacement strategies, covering pre-translation preprocessing and post-translation correction paths</p>
+    <div class="tags">
+      <span class="tag">Dual-Mode Switching</span>
+      <span class="tag">Auto Rule Discovery</span>
+      <span class="tag">Dynamic Thresholds</span>
+    </div>
+  </div>
+
+  <!-- Module 2: Experiment Platform -->
+  <div class="module m-experiment"
+       data-tip="Observes data results from live experiments. Uses Bayesian sequential testing instead of traditional p-values, supporting early stopping at any time; Meta-Analysis aggregates findings across experiments to discover common patterns; intelligent experiment design auto-calculates sample sizes and traffic allocation. The Agent automatically recycles failed experiments and rolls out winning variants.">
+    <div class="icon">📊</div>
+    <div class="num">02</div>
+    <h3>ABTest Experiment Platform</h3>
+    <p>Observes experiment data and performs statistical inference, supporting Bayesian sequential testing and cross-experiment Meta-Analysis</p>
+    <div class="tags">
+      <span class="tag">Bayesian Testing</span>
+      <span class="tag">Intelligent Design</span>
+      <span class="tag">Meta-Analysis</span>
+    </div>
+  </div>
+
+  <!-- Module 3: AI Strategy Library -->
+  <div class="module m-strategy"
+       data-tip="Accumulates AI Prompt strategies across 8 countries × 6 categories. LLM-as-Judge auto-evaluates on four dimensions: information completeness, readability, compliance, and search friendliness; Prompt self-iteration feedback loop auto-compares version differences and generates revision suggestions; cross-country intelligent migration adapts successful Prompts from Market A to Market B.">
+    <div class="icon">🧠</div>
+    <div class="num">03</div>
+    <h3>AI Title Strategy Library</h3>
+    <p>Accumulates AI Prompts by country × category, with four-dimensional auto-evaluation, self-iteration, and cross-country migration</p>
+    <div class="tags">
+      <span class="tag">LLM-as-Judge</span>
+      <span class="tag">Prompt Self-Iteration</span>
+      <span class="tag">Cross-Country Migration</span>
+    </div>
+  </div>
+
+  <!-- Connection arrows SVG -->
+  <svg class="arrows-svg" viewBox="0 0 960 680">
+    <defs>
+      <marker id="ah-blue" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+        <path d="M1,1 L7,4 L1,7" fill="none" stroke="#0369A1" stroke-width="1.5"/>
+      </marker>
+      <marker id="ah-amber" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+        <path d="M1,1 L7,4 L1,7" fill="none" stroke="#B45309" stroke-width="1.5"/>
+      </marker>
+      <marker id="ah-purple" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+        <path d="M1,1 L7,4 L1,7" fill="none" stroke="#7C3AED" stroke-width="1.5"/>
+      </marker>
+    </defs>
+
+    <!-- Translation → Experiment (Strategy Output → Validation) -->
+    <path d="M320,160 Q480,80 640,160" class="arrow-path" stroke="#0369A1" marker-end="url(#ah-blue)" stroke-dasharray="6,3"/>
+
+    <!-- Experiment → AI Strategy (Validation Results → Accumulation) -->
+    <path d="M700,290 Q720,440 560,500" class="arrow-path" stroke="#B45309" marker-end="url(#ah-amber)" stroke-dasharray="6,3"/>
+
+    <!-- AI Strategy → Translation (Optimal Strategy → Feed Back to Production) -->
+    <path d="M400,500 Q240,440 260,290" class="arrow-path" stroke="#7C3AED" marker-end="url(#ah-purple)" stroke-dasharray="6,3"/>
+  </svg>
+
+  <!-- Arrow labels -->
+  <div class="arrow-label" style="top:70px; left:50%; transform:translateX(-50%); background:#E0F2FE; color:#0369A1;">Strategy Output → Validation</div>
+  <div class="arrow-label" style="top:400px; right:50px; background:#FEF3C7; color:#B45309;">Experiment Insights → Strategy Accumulation</div>
+  <div class="arrow-label" style="top:400px; left:50px; background:#F3E8FF; color:#7C3AED;">Optimal Strategy → Feed Back to Production</div>
+</div>
+
+<!-- Bottom data flow -->
+<div class="data-flow">
+  <h4>PROMPT END-TO-END LIFECYCLE</h4>
+  <div class="flow-steps">
+    <div class="flow-step">
+      <div class="step-icon">📝</div>
+      <div class="step-label">Prompt Generation</div>
+      <div class="step-desc">Country × Category customization</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">
+      <div class="step-icon">🌐</div>
+      <div class="step-label">Translation Adaptation</div>
+      <div class="step-desc">Dual-channel replacement rules</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">
+      <div class="step-icon">🧪</div>
+      <div class="step-label">Experiment Validation</div>
+      <div class="step-desc">Bayesian sequential testing</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">
+      <div class="step-icon">⚖️</div>
+      <div class="step-label">Judge Evaluation</div>
+      <div class="step-desc">Four-dimensional auto-scoring</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">
+      <div class="step-icon">📊</div>
+      <div class="step-label">Insight Feedback</div>
+      <div class="step-desc">Meta-Analysis aggregation</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">
+      <div class="step-icon">🔄</div>
+      <div class="step-label">Self-Iteration</div>
+      <div class="step-desc">Version comparison & optimization suggestions</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">
+      <div class="step-icon">🌍</div>
+      <div class="step-label">Cross-Country Migration</div>
+      <div class="step-desc">Market A → Market B</div>
+    </div>
+  </div>
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+const tooltip = document.getElementById('tooltip');
+document.querySelectorAll('.module').forEach(m => {
+  m.addEventListener('mouseenter', e => {
+    tooltip.textContent = m.dataset.tip;
+    tooltip.classList.add('show');
+  });
+  m.addEventListener('mousemove', e => {
+    const x = e.clientX + 16;
+    const y = e.clientY + 16;
+    tooltip.style.left = Math.min(x, window.innerWidth - 300) + 'px';
+    tooltip.style.top = Math.min(y, window.innerHeight - 120) + 'px';
+  });
+  m.addEventListener('mouseleave', () => tooltip.classList.remove('show'));
+});
+
+// Arrow dashed line animation
+document.querySelectorAll('.arrow-path').forEach(p => {
+  let offset = 0;
+  setInterval(() => { offset = (offset + 0.5) % 18; p.style.strokeDashoffset = offset; }, 40);
+});
+</script>
+</body>
+</html>

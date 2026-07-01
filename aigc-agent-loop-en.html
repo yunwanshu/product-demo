@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AIGC Product Optimization Platform — Agent Self-Evolution Loop</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif; background: #F8F9FB; color: #1E293B; min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 40px 20px; }
+
+  .lang-switch { position: fixed; top: 16px; right: 24px; font-size: 12px; color: #6B5CE7; text-decoration: none; border: 1px solid #D4CCEF; border-radius: 6px; padding: 4px 12px; background: #fff; z-index: 200; }
+  .lang-switch:hover { background: #F5F3FF; }
+
+  .title-area { text-align: center; margin-bottom: 40px; }
+  .title-area h1 { font-size: 28px; font-weight: 700; letter-spacing: -0.5px; }
+  .title-area .subtitle { font-size: 14px; color: #94A3B8; margin-top: 8px; }
+
+  .canvas { width: 1000px; }
+
+  /* ── Four-step loop ── */
+  .loop { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px; }
+
+  .stage {
+    background: #fff; border-radius: 16px; padding: 0; overflow: hidden;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.05); border: 1.5px solid #E2E8F0;
+    transition: all 0.25s ease; cursor: pointer; position: relative;
+  }
+  .stage:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.08); }
+
+  .stage-header { padding: 20px 24px 14px; display: flex; align-items: center; gap: 14px; }
+  .stage-header .num {
+    width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center;
+    justify-content: center; font-size: 14px; font-weight: 800; color: #fff; flex-shrink: 0;
+  }
+  .stage-header .info h3 { font-size: 16px; font-weight: 700; }
+  .stage-header .info .desc { font-size: 12px; color: #94A3B8; margin-top: 2px; }
+
+  .stage-body { padding: 0 24px 20px; }
+
+  /* IO block */
+  .io-row { display: flex; gap: 12px; margin-bottom: 14px; }
+  .io-box { flex: 1; border-radius: 10px; padding: 12px 14px; }
+  .io-box.input { background: #F1F5F9; }
+  .io-box.output { background: #F0FDF4; }
+  .io-box .io-label { font-size: 10px; font-weight: 700; color: #94A3B8; letter-spacing: 1px; margin-bottom: 6px; }
+  .io-box .io-item { font-size: 11.5px; color: #475569; line-height: 1.7; }
+  .io-box .io-item::before { content: '›'; color: #94A3B8; margin-right: 5px; font-weight: 700; }
+
+  /* Agent decision logic */
+  .agent-logic {
+    background: #FAF5FF; border: 1.5px solid #E9D5FF; border-radius: 10px;
+    padding: 14px 16px; position: relative;
+  }
+  .agent-logic .logic-label {
+    font-size: 10.5px; font-weight: 700; color: #7C3AED; letter-spacing: 0.5px;
+    margin-bottom: 8px; display: flex; align-items: center; gap: 6px;
+  }
+  .agent-logic .logic-label::before {
+    content: '🤖'; font-size: 12px;
+  }
+  .agent-logic .logic-step {
+    font-size: 11.5px; color: #6D28D9; line-height: 1.8; padding-left: 12px;
+    border-left: 2px solid #DDD6FE;
+  }
+  .agent-logic .logic-step strong { color: #5B21B6; font-weight: 600; }
+
+  /* Connection arrow overlay */
+  .arrows-overlay {
+    position: relative; width: 1000px; height: 60px; margin-bottom: 24px;
+  }
+
+  /* ── Bottom core metrics ── */
+  .metrics-bar {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px;
+    width: 1000px;
+  }
+  .metric-card {
+    background: #fff; border-radius: 12px; padding: 18px 16px; text-align: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04); border: 1.5px solid #E2E8F0;
+  }
+  .metric-card .mv { font-size: 26px; font-weight: 800; }
+  .metric-card .ml { font-size: 11px; color: #94A3B8; margin-top: 4px; font-weight: 500; }
+  .metric-card .md { font-size: 10.5px; color: #64748B; margin-top: 6px; }
+
+  /* ── Feedback arrow area ── */
+  .loop-arrow-area {
+    width: 1000px; display: flex; align-items: center; justify-content: center;
+    padding: 16px 0; position: relative;
+  }
+  .loop-arrow-area svg { overflow: visible; }
+
+  /* ── Color variants ── */
+  .s1 .num { background: #6B5CE7; }
+  .s1 .info h3 { color: #6B5CE7; }
+  .s2 .num { background: #0369A1; }
+  .s2 .info h3 { color: #0369A1; }
+  .s3 .num { background: #B45309; }
+  .s3 .info h3 { color: #B45309; }
+  .s4 .num { background: #059669; }
+  .s4 .info h3 { color: #059669; }
+
+  .mc-purple { color: #6B5CE7; }
+  .mc-blue { color: #0369A1; }
+  .mc-amber { color: #B45309; }
+  .mc-green { color: #059669; }
+
+  /* Step connector arrows */
+  .step-connector {
+    display: flex; align-items: center; justify-content: center;
+    width: 1000px; padding: 6px 0; margin-bottom: 0;
+  }
+  .step-connector .conn-arrow {
+    display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600;
+    color: #94A3B8;
+  }
+  .step-connector .conn-arrow svg { flex-shrink: 0; }
+
+  /* Tooltip */
+  .tooltip {
+    position: fixed; background: #1E293B; color: #fff; font-size: 12px;
+    padding: 10px 14px; border-radius: 8px; max-width: 320px; line-height: 1.6;
+    pointer-events: none; opacity: 0; transition: opacity 0.2s; z-index: 100;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+  }
+  .tooltip.show { opacity: 1; }
+</style>
+</head>
+<body>
+
+<a class="lang-switch" href="aigc-agent-loop.html">Switch to Chinese</a>
+
+<div class="title-area">
+  <h1>Agent Self-Evolution Loop · Detailed Breakdown</h1>
+  <div class="subtitle">Strategy Generation → Translation Adaptation → Experiment Validation → Insight Feedback · Four-Step Continuous Evolution Loop</div>
+</div>
+
+<div class="canvas">
+  <!-- Loop: top row = Strategy Generation + Translation Adaptation -->
+  <div class="loop">
+    <!-- Stage 1: Strategy Generation -->
+    <div class="stage s1" data-tip="The Agent automatically generates and optimizes prompt strategies. It compares new vs. old version scores across four dimensions, diagnoses regression causes, and generates revision suggestions. It also supports auto-migration of validated prompts from Market A to Market B, adapting to local differences.">
+      <div class="stage-header">
+        <div class="num">01</div>
+        <div class="info">
+          <h3>Strategy Generation</h3>
+          <div class="desc">Prompt self-iteration feedback loop + cross-country intelligent migration</div>
+        </div>
+      </div>
+      <div class="stage-body">
+        <div class="io-row">
+          <div class="io-box input">
+            <div class="io-label">INPUT</div>
+            <div class="io-item">Historical prompt versions + scores</div>
+            <div class="io-item">Target country × category</div>
+            <div class="io-item">Source market success cases</div>
+          </div>
+          <div class="io-box output">
+            <div class="io-label">OUTPUT</div>
+            <div class="io-item">Optimized prompt (new version)</div>
+            <div class="io-item">Cross-country adapted version</div>
+            <div class="io-item">Revision suggestions + diagnostic report</div>
+          </div>
+        </div>
+        <div class="agent-logic">
+          <div class="logic-label">Agent Decision Logic</div>
+          <div class="logic-step">
+            <strong>Self-Iteration:</strong> Compare new vs. old four-dimension scores → Identify regressed dimensions → Generate targeted revision suggestions<br>
+            <strong>Cross-Migration:</strong> Source market score > 85 → Auto-trigger migration → Local adaptation → Re-evaluate scoring
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stage 2: Translation Adaptation -->
+    <div class="stage s2" data-tip="The Agent intelligently routes each word to either pre-translation or post-translation replacement. Structural noise (units/symbols/HTML tags) goes pre-translation, while context-dependent words (brands/styles/culture) go post-translation. It also dynamically calibrates QC thresholds, differentiating by language × category instead of a one-size-fits-all 0.75 threshold.">
+      <div class="stage-header">
+        <div class="num">02</div>
+        <div class="info">
+          <h3>Translation Adaptation</h3>
+          <div class="desc">Intelligent routing + dynamic QC threshold calibration</div>
+        </div>
+      </div>
+      <div class="stage-body">
+        <div class="io-row">
+          <div class="io-box input">
+            <div class="io-label">INPUT</div>
+            <div class="io-item">Original product title text</div>
+            <div class="io-item">Word-level classification tags</div>
+            <div class="io-item">Historical QC pass rates</div>
+          </div>
+          <div class="io-box output">
+            <div class="io-label">OUTPUT</div>
+            <div class="io-item">Routing decision (pre/post)</div>
+            <div class="io-item">Replacement rule execution results</div>
+            <div class="io-item">Dynamic QC threshold matrix</div>
+          </div>
+        </div>
+        <div class="agent-logic">
+          <div class="logic-label">Agent Decision Logic</div>
+          <div class="logic-step">
+            <strong>Routing:</strong> Structural noise words → Pre-translation replacement | Context-dependent words → Post-translation replacement<br>
+            <strong>Thresholds:</strong> Language × Category heatmap → Pass rate < 60% relax threshold → Re-inspection rate drops by 5 percentage points
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Connection arrow -->
+  <div class="step-connector">
+    <div class="conn-arrow">
+      <svg width="20" height="20" viewBox="0 0 20 20"><path d="M10,2 L10,16 M5,12 L10,17 L15,12" fill="none" stroke="#94A3B8" stroke-width="1.5" stroke-linecap="round"/></svg>
+      Translated titles enter experiment validation
+      <svg width="20" height="20" viewBox="0 0 20 20"><path d="M10,2 L10,16 M5,12 L10,17 L15,12" fill="none" stroke="#94A3B8" stroke-width="1.5" stroke-linecap="round"/></svg>
+    </div>
+  </div>
+
+  <!-- Loop: bottom row = Experiment Validation + Insight Feedback -->
+  <div class="loop">
+    <!-- Stage 3: Experiment Validation -->
+    <div class="stage s3" data-tip="Uses Bayesian sequential testing instead of traditional fixed-threshold methods. Core metrics P(B>A) and Bayesian factor continuously accumulate evidence, supporting early stopping at any time. The Agent auto-monitors experiment health: warns on insufficient sample size, recommends full rollout on significant results, and suggests extension or termination on flat results.">
+      <div class="stage-header">
+        <div class="num">03</div>
+        <div class="info">
+          <h3>Experiment Validation</h3>
+          <div class="desc">Bayesian sequential testing + auto-recycle & full rollout</div>
+        </div>
+      </div>
+      <div class="stage-body">
+        <div class="io-row">
+          <div class="io-box input">
+            <div class="io-label">INPUT</div>
+            <div class="io-item">Treatment / control group metrics</div>
+            <div class="io-item">Minimum detectable effect & baseline conversion rate</div>
+            <div class="io-item">Real-time traffic allocation data</div>
+          </div>
+          <div class="io-box output">
+            <div class="io-label">OUTPUT</div>
+            <div class="io-item">P(B>A) posterior probability</div>
+            <div class="io-item">Bayesian factor (evidence strength)</div>
+            <div class="io-item">Full rollout / terminate / extend recommendation</div>
+          </div>
+        </div>
+        <div class="agent-logic">
+          <div class="logic-label">Agent Decision Logic</div>
+          <div class="logic-step">
+            <strong>Sequential Testing:</strong> Bayesian factor > 10 → Strong evidence → Recommend full rollout | Bayesian factor < 0.1 → Recommend termination<br>
+            <strong>Auto-Recycle:</strong> CTR significant drop > 15% → Trigger emergency rollback | Insufficient sample → Recommend extension
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stage 4: Insight Feedback -->
+    <div class="stage s4" data-tip="Cross-experiment aggregation analysis: merges conclusions from multiple experiments of the same category/market/strategy type to discover common patterns invisible in individual experiments. The Agent auto-identifies transferable patterns (e.g., a prompt type consistently effective across multiple markets) and feeds insights back to the strategy generation stage, driving the next iteration.">
+      <div class="stage-header">
+        <div class="num">04</div>
+        <div class="info">
+          <h3>Insight Feedback</h3>
+          <div class="desc">Cross-experiment aggregation + pattern insight discovery</div>
+        </div>
+      </div>
+      <div class="stage-body">
+        <div class="io-row">
+          <div class="io-box input">
+            <div class="io-label">INPUT</div>
+            <div class="io-item">All completed experiment data</div>
+            <div class="io-item">Experiment dimension tags (market/category/strategy)</div>
+            <div class="io-item">Time series trend data</div>
+          </div>
+          <div class="io-box output">
+            <div class="io-label">OUTPUT</div>
+            <div class="io-item">Cross-experiment aggregated effect size</div>
+            <div class="io-item">Pattern discovery (market × category matrix)</div>
+            <div class="io-item">Next iteration direction suggestions</div>
+          </div>
+        </div>
+        <div class="agent-logic">
+          <div class="logic-label">Agent Decision Logic</div>
+          <div class="logic-step">
+            <strong>Aggregation:</strong> Similar experiments ≥ 3 → Auto-trigger aggregation → Weighted effect size<br>
+            <strong>Pattern Discovery:</strong> Strategy effective in ≥ 2 markets → Tag as "transferable" → Trigger cross-country migration
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Feedback arrow -->
+  <div class="loop-arrow-area">
+    <svg width="1000" height="48" viewBox="0 0 1000 48">
+      <defs>
+        <marker id="ah-loop" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+          <path d="M1,1 L7,4 L1,7" fill="none" stroke="#6B5CE7" stroke-width="1.5"/>
+        </marker>
+      </defs>
+      <path d="M500,4 Q960,4 960,24 Q960,44 500,44" fill="none" stroke="#6B5CE7" stroke-width="2" stroke-dasharray="6,3" marker-end="url(#ah-loop)"/>
+      <text x="500" y="40" text-anchor="middle" fill="#6B5CE7" font-size="11" font-weight="600">Insight feedback → Drives next round of strategy generation (continuous evolution)</text>
+    </svg>
+  </div>
+
+  <!-- Core metrics -->
+  <div class="metrics-bar">
+    <div class="metric-card">
+      <div class="mv mc-purple">23%</div>
+      <div class="ml">QC Re-inspection Rate Reduction</div>
+      <div class="md">Dynamic thresholds vs fixed 0.75</div>
+    </div>
+    <div class="metric-card">
+      <div class="mv mc-blue">5→3 Days</div>
+      <div class="ml">Experiment Decision Cycle Shortened</div>
+      <div class="md">Bayesian sequential vs fixed sample</div>
+    </div>
+    <div class="metric-card">
+      <div class="mv mc-amber">87%</div>
+      <div class="ml">Cross-Country Migration Success Rate</div>
+      <div class="md">Prompt adaptation score ≥ 80</div>
+    </div>
+    <div class="metric-card">
+      <div class="mv mc-green">4 Rounds/Month</div>
+      <div class="ml">Prompt Self-Iteration Frequency</div>
+      <div class="md">Fully automated, no manual intervention</div>
+    </div>
+  </div>
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+const tooltip = document.getElementById('tooltip');
+document.querySelectorAll('.stage').forEach(s => {
+  s.addEventListener('mouseenter', e => {
+    tooltip.textContent = s.dataset.tip;
+    tooltip.classList.add('show');
+  });
+  s.addEventListener('mousemove', e => {
+    tooltip.style.left = Math.min(e.clientX + 16, window.innerWidth - 340) + 'px';
+    tooltip.style.top = Math.min(e.clientY + 16, window.innerHeight - 120) + 'px';
+  });
+  s.addEventListener('mouseleave', () => tooltip.classList.remove('show'));
+});
+</script>
+</body>
+</html>
