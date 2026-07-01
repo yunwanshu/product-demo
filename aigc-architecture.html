@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AIGC 商品优化平台 — 系统架构总览</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif; background: #F8F9FB; color: #1E293B; min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 40px 20px; }
+
+  .title-area { text-align: center; margin-bottom: 48px; }
+  .title-area h1 { font-size: 28px; font-weight: 700; color: #1E293B; letter-spacing: -0.5px; }
+  .title-area .subtitle { font-size: 14px; color: #94A3B8; margin-top: 8px; }
+
+  .diagram { position: relative; width: 960px; height: 680px; }
+
+  /* ── Agent 外环 ── */
+  .agent-ring {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    border: 2px dashed #B8A9F0; border-radius: 24px;
+    background: linear-gradient(135deg, rgba(107,92,231,0.03), rgba(107,92,231,0.06));
+  }
+  .agent-ring-label {
+    position: absolute; top: -14px; left: 50%; transform: translateX(-50%);
+    background: #6B5CE7; color: #fff; font-size: 13px; font-weight: 600;
+    padding: 4px 20px; border-radius: 20px; white-space: nowrap; letter-spacing: 0.5px;
+  }
+
+  /* ── Agent 能力标签 ── */
+  .agent-caps { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+  .agent-cap {
+    position: absolute; background: #fff; border: 1.5px solid #D4CCEF;
+    border-radius: 8px; padding: 6px 12px; font-size: 11.5px; color: #6B5CE7;
+    font-weight: 500; white-space: nowrap;
+    box-shadow: 0 1px 3px rgba(107,92,231,0.08);
+  }
+  .agent-cap::before {
+    content: ''; display: inline-block; width: 6px; height: 6px;
+    background: #6B5CE7; border-radius: 50%; margin-right: 6px; vertical-align: middle;
+  }
+
+  /* ── 核心三角布局 ── */
+  .module {
+    position: absolute; width: 260px; background: #fff; border-radius: 16px;
+    padding: 24px; box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    border: 2px solid transparent; transition: all 0.25s ease;
+    cursor: pointer;
+  }
+  .module:hover { transform: translateY(-3px); box-shadow: 0 6px 20px rgba(0,0,0,0.1); }
+  .module .icon { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; margin-bottom: 14px; }
+  .module .num { font-size: 11px; font-weight: 700; color: #94A3B8; margin-bottom: 6px; letter-spacing: 1px; }
+  .module h3 { font-size: 16px; font-weight: 700; margin-bottom: 8px; }
+  .module p { font-size: 12.5px; color: #64748B; line-height: 1.6; }
+  .module .tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 12px; }
+  .module .tag { font-size: 10.5px; padding: 3px 8px; border-radius: 4px; font-weight: 500; }
+
+  /* Module 1 - 翻译平台 (top-left) */
+  .m-translate { top: 80px; left: 60px; border-color: #E0F2FE; }
+  .m-translate .icon { background: #E0F2FE; }
+  .m-translate h3 { color: #0369A1; }
+  .m-translate .tag { background: #E0F2FE; color: #0369A1; }
+
+  /* Module 2 - 实验平台 (top-right) */
+  .m-experiment { top: 80px; right: 60px; border-color: #FEF3C7; }
+  .m-experiment .icon { background: #FEF3C7; }
+  .m-experiment h3 { color: #B45309; }
+  .m-experiment .tag { background: #FEF3C7; color: #B45309; }
+
+  /* Module 3 - AI策略库 (bottom-center) */
+  .m-strategy { bottom: 100px; left: 50%; transform: translateX(-50%); border-color: #F3E8FF; }
+  .m-strategy:hover { transform: translateX(-50%) translateY(-3px); }
+  .m-strategy .icon { background: #F3E8FF; }
+  .m-strategy h3 { color: #7C3AED; }
+  .m-strategy .tag { background: #F3E8FF; color: #7C3AED; }
+
+  /* ── 连接箭头 (SVG) ── */
+  .arrows-svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+  .arrow-path { fill: none; stroke-width: 2; stroke-linecap: round; }
+  .arrow-label {
+    position: absolute; font-size: 11px; font-weight: 600; padding: 4px 10px;
+    border-radius: 6px; white-space: nowrap; pointer-events: none;
+  }
+
+  /* ── 底部数据流 ── */
+  .data-flow {
+    width: 960px; margin-top: 32px; background: #fff; border-radius: 14px;
+    padding: 20px 32px; box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+  }
+  .data-flow h4 { font-size: 13px; color: #94A3B8; font-weight: 600; margin-bottom: 14px; letter-spacing: 0.5px; }
+  .flow-steps { display: flex; align-items: center; gap: 0; }
+  .flow-step {
+    flex: 1; text-align: center; padding: 10px 8px; font-size: 12px;
+    color: #475569; position: relative; font-weight: 500;
+  }
+  .flow-step .step-icon { font-size: 22px; margin-bottom: 6px; }
+  .flow-step .step-label { font-size: 11.5px; color: #1E293B; font-weight: 600; }
+  .flow-step .step-desc { font-size: 10.5px; color: #94A3B8; margin-top: 3px; }
+  .flow-arrow { color: #CBD5E1; font-size: 18px; flex-shrink: 0; }
+
+  /* ── Tooltip ── */
+  .tooltip {
+    position: fixed; background: #1E293B; color: #fff; font-size: 12px;
+    padding: 10px 14px; border-radius: 8px; max-width: 280px; line-height: 1.6;
+    pointer-events: none; opacity: 0; transition: opacity 0.2s;
+    z-index: 100; box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+  }
+  .tooltip.show { opacity: 1; }
+</style>
+</head>
+<body>
+
+<div class="title-area">
+  <h1>AIGC 商品优化平台 · 系统架构总览</h1>
+  <div class="subtitle">三模块闭环飞轮 + Agent 智能化增强层</div>
+</div>
+
+<div class="diagram">
+  <!-- Agent 外环 -->
+  <div class="agent-ring">
+    <div class="agent-ring-label">Agent 智能化层 · Intelligent Enhancement Layer</div>
+  </div>
+
+  <!-- Agent 能力标签 -->
+  <div class="agent-caps">
+    <div class="agent-cap" style="top:18px; left:30px;">规则自发现</div>
+    <div class="agent-cap" style="top:18px; left:160px;">智能路由</div>
+    <div class="agent-cap" style="top:18px; right:160px;">贝叶斯序贯检验</div>
+    <div class="agent-cap" style="top:18px; right:20px;">Meta-Analysis</div>
+    <div class="agent-cap" style="bottom:18px; left:30px;">动态阈值校准</div>
+    <div class="agent-cap" style="bottom:18px; left:180px;">LLM-as-Judge</div>
+    <div class="agent-cap" style="bottom:18px; right:180px;">Prompt 自迭代</div>
+    <div class="agent-cap" style="bottom:18px; right:20px;">跨国家迁移</div>
+  </div>
+
+  <!-- 模块1: 翻译平台 -->
+  <div class="module m-translate"
+       data-tip="管理翻译替换策略的双通道系统。翻译前替换处理结构性噪声（单位/符号/HTML），翻译后替换处理语境依赖词（品牌/风格）。Agent 自动挖掘新规则、智能路由决定走前置还是后置、动态校准质检阈值。">
+    <div class="icon">🌐</div>
+    <div class="num">01</div>
+    <h3>翻译优化平台</h3>
+    <p>管理翻译替换策略的双通道系统，覆盖翻译前预处理与翻译后修正两条路径</p>
+    <div class="tags">
+      <span class="tag">双模式切换</span>
+      <span class="tag">规则自发现</span>
+      <span class="tag">动态阈值</span>
+    </div>
+  </div>
+
+  <!-- 模块2: 实验平台 -->
+  <div class="module m-experiment"
+       data-tip="观测已上线实验的数据结果。采用贝叶斯序贯检验替代传统 p-value，支持随时停止；Meta-Analysis 跨实验聚合发现共性规律；智能实验设计自动计算样本量和流量分配。Agent 自动回收失败实验、推全量胜出方案。">
+    <div class="icon">📊</div>
+    <div class="num">02</div>
+    <h3>ABTest 实验平台</h3>
+    <p>观测实验数据并做统计推断，支持贝叶斯序贯检验与跨实验 Meta-Analysis</p>
+    <div class="tags">
+      <span class="tag">贝叶斯检验</span>
+      <span class="tag">智能设计</span>
+      <span class="tag">Meta-Analysis</span>
+    </div>
+  </div>
+
+  <!-- 模块3: AI策略库 -->
+  <div class="module m-strategy"
+       data-tip="针对 8 个国家 × 6 个类目沉淀 AI Prompt 策略。LLM-as-Judge 从信息完整性、可读性、合规性、搜索友好度四个维度自动评估；Prompt 自迭代反馈循环自动对比版本差异并生成修改建议；跨国家智能迁移将 A 市场成功 Prompt 适配到 B 市场。">
+    <div class="icon">🧠</div>
+    <div class="num">03</div>
+    <h3>AI 标题策略库</h3>
+    <p>按国家 × 类目沉淀 AI Prompt，四维自动评估并支持自迭代与跨国家迁移</p>
+    <div class="tags">
+      <span class="tag">LLM-as-Judge</span>
+      <span class="tag">Prompt 自迭代</span>
+      <span class="tag">跨国家迁移</span>
+    </div>
+  </div>
+
+  <!-- 连接箭头 SVG -->
+  <svg class="arrows-svg" viewBox="0 0 960 680">
+    <defs>
+      <marker id="ah-blue" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+        <path d="M1,1 L7,4 L1,7" fill="none" stroke="#0369A1" stroke-width="1.5"/>
+      </marker>
+      <marker id="ah-amber" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+        <path d="M1,1 L7,4 L1,7" fill="none" stroke="#B45309" stroke-width="1.5"/>
+      </marker>
+      <marker id="ah-purple" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+        <path d="M1,1 L7,4 L1,7" fill="none" stroke="#7C3AED" stroke-width="1.5"/>
+      </marker>
+    </defs>
+
+    <!-- 翻译 → 实验 (策略产出 → 效果验证) -->
+    <path d="M320,160 Q480,80 640,160" class="arrow-path" stroke="#0369A1" marker-end="url(#ah-blue)" stroke-dasharray="6,3"/>
+
+    <!-- 实验 → AI策略 (验证结果 → 沉淀) -->
+    <path d="M700,290 Q720,440 560,500" class="arrow-path" stroke="#B45309" marker-end="url(#ah-amber)" stroke-dasharray="6,3"/>
+
+    <!-- AI策略 → 翻译 (最优策略 → 反哺生产) -->
+    <path d="M400,500 Q240,440 260,290" class="arrow-path" stroke="#7C3AED" marker-end="url(#ah-purple)" stroke-dasharray="6,3"/>
+  </svg>
+
+  <!-- 箭头标签 -->
+  <div class="arrow-label" style="top:70px; left:50%; transform:translateX(-50%); background:#E0F2FE; color:#0369A1;">策略产出 → 效果验证</div>
+  <div class="arrow-label" style="top:400px; right:50px; background:#FEF3C7; color:#B45309;">实验结论 → 策略沉淀</div>
+  <div class="arrow-label" style="top:400px; left:50px; background:#F3E8FF; color:#7C3AED;">最优策略 → 反哺生产</div>
+</div>
+
+<!-- 底部数据流 -->
+<div class="data-flow">
+  <h4>PROMPT 生命周期 · END-TO-END LIFECYCLE</h4>
+  <div class="flow-steps">
+    <div class="flow-step">
+      <div class="step-icon">📝</div>
+      <div class="step-label">Prompt 生成</div>
+      <div class="step-desc">国家×类目 定制</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">
+      <div class="step-icon">🌐</div>
+      <div class="step-label">翻译适配</div>
+      <div class="step-desc">替换规则 双通道</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">
+      <div class="step-icon">🧪</div>
+      <div class="step-label">实验验证</div>
+      <div class="step-desc">贝叶斯 序贯检验</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">
+      <div class="step-icon">⚖️</div>
+      <div class="step-label">Judge 评估</div>
+      <div class="step-desc">四维 自动打分</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">
+      <div class="step-icon">📊</div>
+      <div class="step-label">效果回流</div>
+      <div class="step-desc">Meta-Analysis 聚合</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">
+      <div class="step-icon">🔄</div>
+      <div class="step-label">自迭代</div>
+      <div class="step-desc">版本对比 优化建议</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">
+      <div class="step-icon">🌍</div>
+      <div class="step-label">跨国家迁移</div>
+      <div class="step-desc">A市场 → B市场</div>
+    </div>
+  </div>
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+const tooltip = document.getElementById('tooltip');
+document.querySelectorAll('.module').forEach(m => {
+  m.addEventListener('mouseenter', e => {
+    tooltip.textContent = m.dataset.tip;
+    tooltip.classList.add('show');
+  });
+  m.addEventListener('mousemove', e => {
+    const x = e.clientX + 16;
+    const y = e.clientY + 16;
+    tooltip.style.left = Math.min(x, window.innerWidth - 300) + 'px';
+    tooltip.style.top = Math.min(y, window.innerHeight - 120) + 'px';
+  });
+  m.addEventListener('mouseleave', () => tooltip.classList.remove('show'));
+});
+
+// 箭头虚线动画
+document.querySelectorAll('.arrow-path').forEach(p => {
+  let offset = 0;
+  setInterval(() => { offset = (offset + 0.5) % 18; p.style.strokeDashoffset = offset; }, 40);
+});
+</script>
+</body>
+</html>

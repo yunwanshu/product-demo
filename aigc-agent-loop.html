@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AIGC 商品优化平台 — Agent 自进化闭环</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif; background: #F8F9FB; color: #1E293B; min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 40px 20px; }
+
+  .title-area { text-align: center; margin-bottom: 40px; }
+  .title-area h1 { font-size: 28px; font-weight: 700; letter-spacing: -0.5px; }
+  .title-area .subtitle { font-size: 14px; color: #94A3B8; margin-top: 8px; }
+
+  .canvas { width: 1000px; }
+
+  /* ── 四步闭环 ── */
+  .loop { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px; }
+
+  .stage {
+    background: #fff; border-radius: 16px; padding: 0; overflow: hidden;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.05); border: 1.5px solid #E2E8F0;
+    transition: all 0.25s ease; cursor: pointer; position: relative;
+  }
+  .stage:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.08); }
+
+  .stage-header { padding: 20px 24px 14px; display: flex; align-items: center; gap: 14px; }
+  .stage-header .num {
+    width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center;
+    justify-content: center; font-size: 14px; font-weight: 800; color: #fff; flex-shrink: 0;
+  }
+  .stage-header .info h3 { font-size: 16px; font-weight: 700; }
+  .stage-header .info .desc { font-size: 12px; color: #94A3B8; margin-top: 2px; }
+
+  .stage-body { padding: 0 24px 20px; }
+
+  /* IO 块 */
+  .io-row { display: flex; gap: 12px; margin-bottom: 14px; }
+  .io-box { flex: 1; border-radius: 10px; padding: 12px 14px; }
+  .io-box.input { background: #F1F5F9; }
+  .io-box.output { background: #F0FDF4; }
+  .io-box .io-label { font-size: 10px; font-weight: 700; color: #94A3B8; letter-spacing: 1px; margin-bottom: 6px; }
+  .io-box .io-item { font-size: 11.5px; color: #475569; line-height: 1.7; }
+  .io-box .io-item::before { content: '›'; color: #94A3B8; margin-right: 5px; font-weight: 700; }
+
+  /* Agent 决策逻辑 */
+  .agent-logic {
+    background: #FAF5FF; border: 1.5px solid #E9D5FF; border-radius: 10px;
+    padding: 14px 16px; position: relative;
+  }
+  .agent-logic .logic-label {
+    font-size: 10.5px; font-weight: 700; color: #7C3AED; letter-spacing: 0.5px;
+    margin-bottom: 8px; display: flex; align-items: center; gap: 6px;
+  }
+  .agent-logic .logic-label::before {
+    content: '🤖'; font-size: 12px;
+  }
+  .agent-logic .logic-step {
+    font-size: 11.5px; color: #6D28D9; line-height: 1.8; padding-left: 12px;
+    border-left: 2px solid #DDD6FE;
+  }
+  .agent-logic .logic-step strong { color: #5B21B6; font-weight: 600; }
+
+  /* 连接箭头覆盖层 */
+  .arrows-overlay {
+    position: relative; width: 1000px; height: 60px; margin-bottom: 24px;
+  }
+
+  /* ── 底部核心指标 ── */
+  .metrics-bar {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px;
+    width: 1000px;
+  }
+  .metric-card {
+    background: #fff; border-radius: 12px; padding: 18px 16px; text-align: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04); border: 1.5px solid #E2E8F0;
+  }
+  .metric-card .mv { font-size: 26px; font-weight: 800; }
+  .metric-card .ml { font-size: 11px; color: #94A3B8; margin-top: 4px; font-weight: 500; }
+  .metric-card .md { font-size: 10.5px; color: #64748B; margin-top: 6px; }
+
+  /* ── 回流箭头区 ── */
+  .loop-arrow-area {
+    width: 1000px; display: flex; align-items: center; justify-content: center;
+    padding: 16px 0; position: relative;
+  }
+  .loop-arrow-area svg { overflow: visible; }
+
+  /* ── Color variants ── */
+  .s1 .num { background: #6B5CE7; }
+  .s1 .info h3 { color: #6B5CE7; }
+  .s2 .num { background: #0369A1; }
+  .s2 .info h3 { color: #0369A1; }
+  .s3 .num { background: #B45309; }
+  .s3 .info h3 { color: #B45309; }
+  .s4 .num { background: #059669; }
+  .s4 .info h3 { color: #059669; }
+
+  .mc-purple { color: #6B5CE7; }
+  .mc-blue { color: #0369A1; }
+  .mc-amber { color: #B45309; }
+  .mc-green { color: #059669; }
+
+  /* 步骤连接箭头 */
+  .step-connector {
+    display: flex; align-items: center; justify-content: center;
+    width: 1000px; padding: 6px 0; margin-bottom: 0;
+  }
+  .step-connector .conn-arrow {
+    display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600;
+    color: #94A3B8;
+  }
+  .step-connector .conn-arrow svg { flex-shrink: 0; }
+
+  /* Tooltip */
+  .tooltip {
+    position: fixed; background: #1E293B; color: #fff; font-size: 12px;
+    padding: 10px 14px; border-radius: 8px; max-width: 320px; line-height: 1.6;
+    pointer-events: none; opacity: 0; transition: opacity 0.2s; z-index: 100;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+  }
+  .tooltip.show { opacity: 1; }
+</style>
+</head>
+<body>
+
+<div class="title-area">
+  <h1>Agent 自进化闭环 · 细节拆解</h1>
+  <div class="subtitle">策略生成 → 翻译适配 → 实验验证 → 效果回流 · 四步闭环持续进化</div>
+</div>
+
+<div class="canvas">
+  <!-- 闭环: 上排 = 策略生成 + 翻译适配 -->
+  <div class="loop">
+    <!-- Stage 1: 策略生成 -->
+    <div class="stage s1" data-tip="Agent 自动生成和优化 Prompt 策略。对比新旧版本在四维评分上的差异，诊断回归原因并生成修改建议。同时支持将 A 市场验证过的 Prompt 自动迁移到 B 市场，适配本地化差异。">
+      <div class="stage-header">
+        <div class="num">01</div>
+        <div class="info">
+          <h3>策略生成</h3>
+          <div class="desc">Prompt Self-Iteration + Cross-Country Migration</div>
+        </div>
+      </div>
+      <div class="stage-body">
+        <div class="io-row">
+          <div class="io-box input">
+            <div class="io-label">INPUT</div>
+            <div class="io-item">历史 Prompt 版本 + 评分</div>
+            <div class="io-item">目标国家 × 类目</div>
+            <div class="io-item">源市场成功案例</div>
+          </div>
+          <div class="io-box output">
+            <div class="io-label">OUTPUT</div>
+            <div class="io-item">优化后 Prompt v(n+1)</div>
+            <div class="io-item">跨国家适配版本</div>
+            <div class="io-item">修改建议 + 诊断报告</div>
+          </div>
+        </div>
+        <div class="agent-logic">
+          <div class="logic-label">Agent 决策逻辑</div>
+          <div class="logic-step">
+            <strong>自迭代：</strong>对比 v(n) 与 v(n-1) 四维评分差 → 识别回归维度 → 生成针对性修改建议<br>
+            <strong>跨迁移：</strong>源市场 Score > 85 → 自动触发迁移 → 本地化适配 → Judge 重评分
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stage 2: 翻译适配 -->
+    <div class="stage s2" data-tip="Agent 智能路由决定每个词走翻译前替换还是翻译后替换。结构性噪声（单位/符号/HTML 标签）走翻译前，语境依赖词（品牌/风格/文化）走翻译后。同时动态校准质检阈值，按语言×品类差异化设置，替代一刀切的 0.75 阈值。">
+      <div class="stage-header">
+        <div class="num">02</div>
+        <div class="info">
+          <h3>翻译适配</h3>
+          <div class="desc">Smart Routing + Dynamic QA Threshold</div>
+        </div>
+      </div>
+      <div class="stage-body">
+        <div class="io-row">
+          <div class="io-box input">
+            <div class="io-label">INPUT</div>
+            <div class="io-item">原始商品标题文本</div>
+            <div class="io-item">词级分类标签</div>
+            <div class="io-item">历史质检通过率</div>
+          </div>
+          <div class="io-box output">
+            <div class="io-label">OUTPUT</div>
+            <div class="io-item">路由决策（前置/后置）</div>
+            <div class="io-item">替换规则执行结果</div>
+            <div class="io-item">动态质检阈值矩阵</div>
+          </div>
+        </div>
+        <div class="agent-logic">
+          <div class="logic-label">Agent 决策逻辑</div>
+          <div class="logic-step">
+            <strong>路由：</strong>结构噪声词 → 翻译前替换 ｜ 语境依赖词 → 翻译后替换<br>
+            <strong>阈值：</strong>per-language × per-category 热力图 → 通过率 < 60% 则放宽阈值 → 复检率降低 5pp
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 连接箭头 -->
+  <div class="step-connector">
+    <div class="conn-arrow">
+      <svg width="20" height="20" viewBox="0 0 20 20"><path d="M10,2 L10,16 M5,12 L10,17 L15,12" fill="none" stroke="#94A3B8" stroke-width="1.5" stroke-linecap="round"/></svg>
+      翻译后的标题进入实验验证
+      <svg width="20" height="20" viewBox="0 0 20 20"><path d="M10,2 L10,16 M5,12 L10,17 L15,12" fill="none" stroke="#94A3B8" stroke-width="1.5" stroke-linecap="round"/></svg>
+    </div>
+  </div>
+
+  <!-- 闭环: 下排 = 实验验证 + 效果回流 -->
+  <div class="loop">
+    <!-- Stage 3: 实验验证 -->
+    <div class="stage s3" data-tip="采用贝叶斯序贯检验替代传统 p-value 固定阈值方法。核心指标 P(B>A) 和 Bayes Factor 持续累积证据，支持随时停止。Agent 自动监控实验健康度：样本量不足时预警、效果显著时建议推全量、效果持平时建议延长或终止。">
+      <div class="stage-header">
+        <div class="num">03</div>
+        <div class="info">
+          <h3>实验验证</h3>
+          <div class="desc">Bayesian Sequential Testing + Auto Recovery</div>
+        </div>
+      </div>
+      <div class="stage-body">
+        <div class="io-row">
+          <div class="io-box input">
+            <div class="io-label">INPUT</div>
+            <div class="io-item">实验组 / 对照组指标</div>
+            <div class="io-item">MDE 与基线转化率</div>
+            <div class="io-item">实时流量分配数据</div>
+          </div>
+          <div class="io-box output">
+            <div class="io-label">OUTPUT</div>
+            <div class="io-item">P(B>A) 后验概率</div>
+            <div class="io-item">Bayes Factor 证据强度</div>
+            <div class="io-item">推全量 / 终止 / 延长建议</div>
+          </div>
+        </div>
+        <div class="agent-logic">
+          <div class="logic-label">Agent 决策逻辑</div>
+          <div class="logic-step">
+            <strong>序贯检验：</strong>BF > 10 → 强证据支持 → 建议推全量 ｜ BF < 0.1 → 建议终止<br>
+            <strong>自动回收：</strong>CTR 显著下降 > 15% → 触发紧急回收 ｜ 样本量不足 → 建议延长
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stage 4: 效果回流 -->
+    <div class="stage s4" data-tip="Meta-Analysis 跨实验聚合：将同一品类/市场/策略类型的多个实验结论合并，发现单实验看不到的共性规律。Agent 自动识别可迁移的模式（如某类 Prompt 在多个市场持续有效），并将洞察回流到策略生成环节，驱动下一轮迭代。">
+      <div class="stage-header">
+        <div class="num">04</div>
+        <div class="info">
+          <h3>效果回流</h3>
+          <div class="desc">Meta-Analysis + Cross-Experiment Insights</div>
+        </div>
+      </div>
+      <div class="stage-body">
+        <div class="io-row">
+          <div class="io-box input">
+            <div class="io-label">INPUT</div>
+            <div class="io-item">所有已完成实验数据</div>
+            <div class="io-item">实验维度标签（市场/品类/策略）</div>
+            <div class="io-item">时间序列趋势数据</div>
+          </div>
+          <div class="io-box output">
+            <div class="io-label">OUTPUT</div>
+            <div class="io-item">跨实验聚合效应量</div>
+            <div class="io-item">模式发现（市场×品类矩阵）</div>
+            <div class="io-item">下一轮迭代方向建议</div>
+          </div>
+        </div>
+        <div class="agent-logic">
+          <div class="logic-label">Agent 决策逻辑</div>
+          <div class="logic-step">
+            <strong>聚合分析：</strong>同类实验 ≥ 3 个 → 自动触发 Meta-Analysis → 加权效应量<br>
+            <strong>模式发现：</strong>某策略在 ≥ 2 个市场有效 → 标记为「可迁移」 → 触发跨国家迁移
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 回流箭头 -->
+  <div class="loop-arrow-area">
+    <svg width="1000" height="48" viewBox="0 0 1000 48">
+      <defs>
+        <marker id="ah-loop" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+          <path d="M1,1 L7,4 L1,7" fill="none" stroke="#6B5CE7" stroke-width="1.5"/>
+        </marker>
+      </defs>
+      <path d="M500,4 Q960,4 960,24 Q960,44 500,44" fill="none" stroke="#6B5CE7" stroke-width="2" stroke-dasharray="6,3" marker-end="url(#ah-loop)"/>
+      <text x="500" y="40" text-anchor="middle" fill="#6B5CE7" font-size="11" font-weight="600">效果洞察回流 → 驱动下一轮策略生成（持续进化）</text>
+    </svg>
+  </div>
+
+  <!-- 核心指标 -->
+  <div class="metrics-bar">
+    <div class="metric-card">
+      <div class="mv mc-purple">23%</div>
+      <div class="ml">质检复检率下降</div>
+      <div class="md">动态阈值 vs 固定 0.75</div>
+    </div>
+    <div class="metric-card">
+      <div class="mv mc-blue">5→3 天</div>
+      <div class="ml">实验决策周期缩短</div>
+      <div class="md">贝叶斯序贯 vs 固定样本</div>
+    </div>
+    <div class="metric-card">
+      <div class="mv mc-amber">87%</div>
+      <div class="ml">跨国家迁移成功率</div>
+      <div class="md">Prompt 适配后 Judge ≥ 80</div>
+    </div>
+    <div class="metric-card">
+      <div class="mv mc-green">4 轮/月</div>
+      <div class="ml">Prompt 自迭代频率</div>
+      <div class="md">全自动无需人工干预</div>
+    </div>
+  </div>
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+const tooltip = document.getElementById('tooltip');
+document.querySelectorAll('.stage').forEach(s => {
+  s.addEventListener('mouseenter', e => {
+    tooltip.textContent = s.dataset.tip;
+    tooltip.classList.add('show');
+  });
+  s.addEventListener('mousemove', e => {
+    tooltip.style.left = Math.min(e.clientX + 16, window.innerWidth - 340) + 'px';
+    tooltip.style.top = Math.min(e.clientY + 16, window.innerHeight - 120) + 'px';
+  });
+  s.addEventListener('mouseleave', () => tooltip.classList.remove('show'));
+});
+</script>
+</body>
+</html>
