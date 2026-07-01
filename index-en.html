@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Product Design Portfolio — Li Jiazhen</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f5f6fa;color:#1a1a2e;line-height:1.6;min-height:100vh}
+.container{max-width:960px;margin:0 auto;padding:60px 32px 80px}
+.hero{text-align:center;margin-bottom:56px}
+.hero h1{font-size:32px;font-weight:700;margin-bottom:8px;letter-spacing:-.5px}
+.hero .subtitle{font-size:16px;color:#64748b;margin-bottom:4px}
+.hero .desc{font-size:14px;color:#94a3b8;max-width:600px;margin:0 auto}
+.lang-switch{text-align:center;margin-top:12px}
+.lang-switch a{font-size:12px;color:#818cf8;text-decoration:none;border:1px solid #818cf8;padding:4px 14px;border-radius:20px;transition:all .2s}
+.lang-switch a:hover{background:#818cf8;color:#fff}
+/* SECTION */
+.section{margin-bottom:48px}
+.section-header{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.section-header .dot{width:10px;height:10px;border-radius:50%}
+.section-header h2{font-size:20px;font-weight:700}
+.section-desc{font-size:13px;color:#94a3b8;margin-bottom:20px}
+/* CARDS */
+.card-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
+.card{background:#fff;border:1px solid #e8eaef;border-radius:14px;padding:24px;text-decoration:none;color:#1a1a2e;transition:all .2s;display:flex;flex-direction:column}
+.card:hover{border-color:#818cf8;box-shadow:0 4px 20px rgba(79,70,229,.08);transform:translateY(-2px)}
+.card .card-num{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px}
+.card .card-title{font-size:16px;font-weight:600;margin-bottom:6px}
+.card .card-desc{font-size:13px;color:#64748b;line-height:1.6;flex:1}
+.card .card-tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:14px}
+.card .card-tags span{font-size:10px;font-weight:600;padding:3px 10px;border-radius:10px;background:#f1f3f7;color:#64748b}
+/* FOOTER */
+.footer{text-align:center;font-size:12px;color:#94a3b8;margin-top:60px;padding-top:24px;border-top:1px solid #e8eaef}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="hero">
+    <h1>Product Design Portfolio</h1>
+    <p class="subtitle">Li Jiazhen · Product Manager</p>
+    <p class="desc">Interactive demos showcasing my capabilities in experimentation platform design, AI strategy system architecture, and backend settlement system design. Click any card to explore.</p>
+    <div class="lang-switch"><a href="index.html">Switch to Chinese / 切换中文</a></div>
+  </div>
+
+  <!-- ARCHITECTURE DIAGRAMS -->
+  <div class="section">
+    <div class="section-header">
+      <div class="dot" style="background:#e11d48"></div>
+      <h2>System Architecture</h2>
+    </div>
+    <p class="section-desc">Architecture overviews and detailed breakdowns of both systems, designed for portfolio presentations.</p>
+    <div class="card-grid">
+      <a href="aigc-architecture.html" class="card">
+        <div class="card-num" style="color:#e11d48">AIGC · Overview</div>
+        <div class="card-title">AIGC System Architecture</div>
+        <div class="card-desc">Three-module closed-loop flywheel with an Agent intelligence layer, illustrating the self-evolving Translation → Experiment → Strategy system.</div>
+        <div class="card-tags"><span>Closed-Loop</span><span>Agent Layer</span><span>Architecture</span></div>
+      </a>
+      <a href="aigc-agent-loop.html" class="card">
+        <div class="card-num" style="color:#e11d48">AIGC · Deep Dive</div>
+        <div class="card-title">Agent Self-Evolution Loop</div>
+        <div class="card-desc">Strategy Generation → Translation Adaptation → Experiment Validation → Insight Feedback — a four-step closed loop with detailed Agent decision logic.</div>
+        <div class="card-tags"><span>Decision Logic</span><span>I/O Breakdown</span><span>Key Metrics</span></div>
+      </a>
+      <a href="settlement-overview.html" class="card">
+        <div class="card-num" style="color:#e11d48">Settlement · Overview</div>
+        <div class="card-title">End-to-End Business Flow</div>
+        <div class="card-desc">Billing Rules → Reconciliation → Invoice Verification → Payment Approval — a four-step pipeline with key decision points and KPIs.</div>
+        <div class="card-tags"><span>4-Step Pipeline</span><span>KPI Dashboard</span><span>Flow Metrics</span></div>
+      </a>
+      <a href="settlement-decision-tree.html" class="card">
+        <div class="card-num" style="color:#e11d48">Settlement · Deep Dive</div>
+        <div class="card-title">Reconciliation Decision Tree + Exception Handling</div>
+        <div class="card-desc">11-step decision tree visualization with product-driven solutions for the top 3 blocking reasons.</div>
+        <div class="card-tags"><span>Decision Tree</span><span>Exception Handling</span><span>Product Solutions</span></div>
+      </a>
+    </div>
+  </div>
+
+  <!-- AIGC -->
+  <div class="section">
+    <div class="section-header">
+      <div class="dot" style="background:#4f46e5"></div>
+      <h2>AIGC Product Optimization Platform</h2>
+    </div>
+    <p class="section-desc">An AIGC-powered product title optimization system built during my time at Pinduoduo/Temu, covering ABTest experimentation, translation optimization, and AI title strategy — with Agent-driven intelligent enhancement.</p>
+    <div class="card-grid">
+      <a href="experiment-platform.html" class="card">
+        <div class="card-num" style="color:#4f46e5">01 · Experiment Platform</div>
+        <div class="card-title">ABTest Experiment Platform</div>
+        <div class="card-desc">Monitor live experiment results with Bayesian sequential testing, smart experiment design, and Meta-Analysis across experiments. Agent auto-recovers failing experiments and promotes winners.</div>
+        <div class="card-tags"><span>Bayesian Testing</span><span>Smart Design</span><span>Meta-Analysis</span></div>
+      </a>
+      <a href="translation-platform.html" class="card">
+        <div class="card-num" style="color:#4f46e5">02 · Translation Platform</div>
+        <div class="card-title">Translation Optimization Platform</div>
+        <div class="card-desc">Manage translation replacement rules across pre-translate and post-translate channels. Agent auto-discovers rules, routes intelligently, and dynamically calibrates QA thresholds.</div>
+        <div class="card-tags"><span>Dual-Mode</span><span>Rule Discovery</span><span>Dynamic Threshold</span></div>
+      </a>
+      <a href="ai-title-strategy.html" class="card">
+        <div class="card-num" style="color:#4f46e5">03 · AI Strategy Library</div>
+        <div class="card-title">AI Title Strategy Library</div>
+        <div class="card-desc">Curate AI prompts across 8 countries × 6 categories. LLM-as-Judge 4-dimension evaluation, prompt self-iteration feedback loop, and cross-country intelligent migration.</div>
+        <div class="card-tags"><span>LLM-as-Judge</span><span>Prompt Iteration</span><span>Cross-Country Migration</span></div>
+      </a>
+    </div>
+  </div>
+
+  <!-- SETTLEMENT -->
+  <div class="section">
+    <div class="section-header">
+      <div class="dot" style="background:#0f766e"></div>
+      <h2>Warehouse Transfer Settlement System</h2>
+    </div>
+    <p class="section-desc">A full-lifecycle settlement system for inter-warehouse transfer operations, covering billing rule configuration, reconciliation & invoicing, invoice aggregation & verification, and payment approval & closure.</p>
+    <div class="card-grid">
+      <a href="billing-rules.html" class="card">
+        <div class="card-num" style="color:#0f766e">01 · Billing Rules</div>
+        <div class="card-title">Billing Rules Configuration</div>
+        <div class="card-desc">Configure billing standards for transport tasks. Three pricing models: fixed rate (flat fee), tiered pricing (base + per-km), and monthly subscription — with uniqueness validation.</div>
+        <div class="card-tags"><span>3 Pricing Models</span><span>Uniqueness Check</span><span>Rule Lifecycle</span></div>
+      </a>
+      <a href="reconciliation.html" class="card">
+        <div class="card-num" style="color:#0f766e">02 · Reconciliation</div>
+        <div class="card-title">Reconciliation Management</div>
+        <div class="card-desc">Automated billing decisions for transport tasks via a 10+ step decision chain, with ops review. Interactive decision tree traces each task's evaluation path.</div>
+        <div class="card-tags"><span>Decision Tree</span><span>Path Tracing</span><span>Batch Operations</span></div>
+      </a>
+      <a href="bill-management.html" class="card">
+        <div class="card-num" style="color:#0f766e">03 · Invoice Management</div>
+        <div class="card-title">Invoice Aggregation & Verification</div>
+        <div class="card-desc">Aggregate confirmed reconciliation records into monthly invoices by vendor, type, and month. 12-step verification, risk scoring, online/offline reconciliation, and approval workflows.</div>
+        <div class="card-tags"><span>12-Step Verification</span><span>Risk Scoring</span><span>Approval Flow</span></div>
+      </a>
+      <a href="payment-management.html" class="card">
+        <div class="card-num" style="color:#0f766e">04 · Payment</div>
+        <div class="card-title">Payment Approval & Closure</div>
+        <div class="card-desc">Approved invoices enter the payment flow: verify amounts, confirm invoices, initiate OA approval. Supports transport, penalty, and subsidy billing types.</div>
+        <div class="card-tags"><span>Invoice Verification</span><span>OA Approval</span><span>Payment Closure</span></div>
+      </a>
+    </div>
+  </div>
+
+  <div class="footer">
+    © 2024 Li Jiazhen · Product Design Portfolio · For Interview Use Only
+  </div>
+</div>
+</body>
+</html>
